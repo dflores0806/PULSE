@@ -219,7 +219,7 @@ flowchart TD
 
 ```
 
-## 🔁 Example sequence diagram
+## 🔁 Sequence diagram
 
 ```mermaid
 sequenceDiagram
