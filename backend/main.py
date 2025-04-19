@@ -1,0 +1,610 @@
+# 🌐 FastAPI & related
+from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+# 🔧 Pydantic
+from pydantic import BaseModel
+
+# 📊 Machine Learning & Data
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+import faiss
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error, r2_score
+from sentence_transformers import SentenceTransformer
+
+# 📚 Utilities & system
+import os
+import glob
+import json
+import shutil
+import tempfile
+import zipfile
+import requests
+from datetime import datetime
+from pathlib import Path
+from datetime import datetime
+from langdetect import detect
+
+
+CONFIG_PATH = Path(".config/config.json")
+
+DATASETS_FOLDER = Path("datasets")
+MODEL_FOLDER = Path("models")
+SUMMARY_FOLDER = Path("summaries")
+
+DATASETS_FOLDER.mkdir(parents=True, exist_ok=True)
+MODEL_FOLDER.mkdir(parents=True, exist_ok=True)
+SUMMARY_FOLDER.mkdir(parents=True, exist_ok=True)
+
+app = FastAPI()
+app.mount("/models", StaticFiles(directory=MODEL_FOLDER), name="models")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# PREDICTIONS
+stored_data = {}
+
+class FeatureSelection(BaseModel):
+    features: list[str]
+    epochs: int
+    test_size: float
+
+class PredictionInput(BaseModel):
+    values: dict
+
+@app.post("/pue/gen/upload_data", tags=["PUEModelGenerator"])
+async def upload_data(model_name: str = Form(...), file: UploadFile = File(...)):
+    file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
+
+    df = pd.read_csv(file_location, sep=';')
+    df.columns = [col.lower() for col in df.columns]
+        
+    return {"message": "File uploaded successfully", "columns": df.columns.tolist()}
+
+@app.post("/pue/gen/load_sample", tags=["PUEModelGenerator"])
+def load_sample(model_name: str = Form(...)):
+    sample_path = os.path.abspath(Path(DATASETS_FOLDER, "sample.csv"))
+    dest_path = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
+
+    if not Path(sample_path):
+        return {"error": "Sample file not found."}
+
+    df = pd.read_csv(sample_path, sep=';')
+    df.columns = [col.lower() for col in df.columns]
+    df.to_csv(dest_path, index=False)
+
+    return {"message": "Sample loaded successfully.", "columns": df.columns.tolist()}
+
+@app.post("/pue/gen/suggest_features", tags=["PUEModelGenerator"])
+def suggest_features(model_name: str = Form(...)):
+    file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
+    if not Path(file_location):
+        return {"error": "No CSV uploaded yet."}
+
+    df = pd.read_csv(file_location, sep=';')
+    df.columns = [col.lower() for col in df.columns]
+
+    if 'pue' not in df.columns:
+        return {"error": "'pue' column not found in uploaded data."}
+
+    corrs = df.corr(numeric_only=True)['pue'].abs().dropna().sort_values(ascending=False)
+    suggested = corrs[corrs.index != 'pue'].head(5).index.tolist()
+    return {"suggested_features": suggested, "correlations": corrs.to_dict()}
+
+@app.post("/pue/gen/train_model", tags=["PUEModelGenerator"])
+def train_model(
+    model_name: str = Form(...),
+    features: str = Form(...),
+    epochs: int = Form(...),
+    test_size: float = Form(...)
+):
+    features = json.loads(features)
+    file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
+    df = pd.read_csv(file_location, sep=';')
+    df.columns = [col.lower() for col in df.columns]
+    X = df[features].values
+    y = df['pue'].values
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=test_size / 100, random_state=42)
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dense(1)
+    ])
+
+    model.compile(optimizer='adam', loss='mse')
+    history = model.fit(X_train, y_train, epochs=epochs, batch_size=16, verbose=0)
+
+    model.save(Path(MODEL_FOLDER, f'{model_name}.h5'), include_optimizer=False)
+    joblib.dump(scaler, Path(MODEL_FOLDER, f'{model_name}_scaler.gz'))
+    stored_data[model_name] = features
+
+
+    y_pred = model.predict(X_test).flatten()
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    loss = history.history['loss'][-1]
+
+    SUMMARY_FOLDER.mkdir(parents=True, exist_ok=True)
+    summary_path = Path(SUMMARY_FOLDER, f"{model_name}.json")
+    with open(summary_path, "w") as f:
+        json.dump({
+            "model_name": model_name,
+            "features": features,
+            "epochs": epochs,
+            "test_size": test_size,
+            "metrics": {
+                "loss": float(loss),
+                "mae": float(mae),
+                "r2": float(r2)
+            }
+        }, f, indent=2)
+
+    return {"message": "Model trained successfully.", "loss": float(loss), "mae": float(mae), "r2": float(r2)}
+
+@app.post("/pue/gen/predict", tags=["PUEModelGenerator"])
+def predict_pue(
+    input: str = Form(...),
+    model_name: str = Form(...)
+):
+    input_data = json.loads(input)
+    model_path = Path(MODEL_FOLDER, f'{model_name}.h5')
+    scaler_path = Path(MODEL_FOLDER, f'{model_name}_scaler.gz')
+    if not Path(model_path) or not Path(scaler_path):
+        return {"error": "Model not trained yet."}
+
+    model = tf.keras.models.load_model(model_path)
+    
+    if not hasattr(model, 'predict'):
+        raise RuntimeError("Model loaded is not ready for prediction.")
+
+    scaler = joblib.load(scaler_path)
+
+    summary_path = Path(SUMMARY_FOLDER, f"{model_name}.json")
+    if not Path(summary_path):
+        return {"error": "Summary not found."}
+
+    with open(summary_path) as f:
+        summary = json.load(f)
+
+    features = summary.get("features")
+    if not features:
+        return {"error": "Features not defined in summary."}
+
+    values = [input_data['values'][feat] for feat in features]
+    X = scaler.transform([values])
+    prediction = model.predict(X)[0][0]
+    update_prediction_stats()
+    
+    return {"pue_prediction": round(float(prediction), 4)}
+
+def update_prediction_stats():
+    
+    stats_path = Path(".config", "statistics.json")
+    Path(".config").mkdir(parents=True, exist_ok=True)
+
+    stats = {
+        "predictions_per_month": {},
+        "llm_questions": 0
+    }
+
+    if Path(stats_path):
+        try:
+            with open(stats_path, "r") as f:
+                content = f.read()
+                if content.strip(): 
+                    stats = json.loads(content)
+        except Exception:
+            pass  
+
+    now = datetime.now()
+    key = f"{now.year}-{now.month:02}"
+    stats["predictions_per_month"][key] = stats["predictions_per_month"].get(key, 0) + 1
+
+    with open(stats_path, "w") as f:
+        json.dump(stats, f, indent=2)
+
+@app.post("/pue/gen/example_input", tags=["PUEModelGenerator"])
+def get_example_input(
+    features: str = Form(...),
+    model_name: str = Form(...)
+):
+    features = json.loads(features)
+    file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
+    if not Path(file_location):
+        return {"error": "No CSV uploaded."}
+
+    df = pd.read_csv(file_location, sep=';')
+    df.columns = [col.lower() for col in df.columns]
+
+    missing = [f for f in features if f not in df.columns]
+    if missing:
+        return {"error": f"Missing features in data: {missing}"}
+
+    row = df[features].dropna().sample(1).iloc[0]
+    return {"example": row.to_dict()}
+
+@app.get("/pue/exp/models", tags=["PUEModelExplorer"])
+def list_models():
+    if not MODEL_FOLDER.exists():
+        return {"models": []}
+    model_names = [f.stem for f in MODEL_FOLDER.iterdir() if f.suffix == ".h5"]
+    return {"models": model_names}
+
+@app.get("/pue/exp/summary/{model_name}", tags=["PUEModelExplorer"])
+def get_model_summary(model_name: str):
+    summary_file = Path("summaries", f"{model_name}.json")
+    if not Path(summary_file):
+        return {"error": "Summary not found"}
+    with open(summary_file, "r") as f:
+        return json.load(f)
+
+@app.delete("/pue/exp/delete/{model_name}", tags=["PUEModelExplorer"])
+def delete_model(model_name: str):
+    deleted = []
+    errors = []
+
+    files_to_delete = (
+        list(MODEL_FOLDER.glob(f"{model_name}*")) +
+        list(SUMMARY_FOLDER.glob(f"{model_name}.json")) +
+        list(DATASETS_FOLDER.glob(f"{model_name}.csv"))
+    )
+
+    for path in files_to_delete:
+        if path.exists():
+            try:
+                path.unlink()
+                deleted.append(str(path))
+            except Exception as e:
+                errors.append(f"Error deleting {path}: {str(e)}")
+
+    return {"deleted": deleted, "errors": errors}
+
+@app.get("/pue/exp/download/{model_name}.zip", tags=["PUEModelExplorer"])
+def download_model_zip(model_name: str):
+    model_path = Path(MODEL_FOLDER, f"{model_name}.h5")
+    scaler_path = Path(MODEL_FOLDER, f"{model_name}_scaler.gz")
+    csv_path = Path(DATASETS_FOLDER, f"{model_name}.csv")
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        with zipfile.ZipFile(tmp.name, 'w') as zipf:
+            if Path(model_path):
+                zipf.write(model_path, arcname=f"{model_name}.h5")
+            if Path(scaler_path):
+                zipf.write(scaler_path, arcname=f"{model_name}_scaler.gz")
+            if Path(csv_path):
+                zipf.write(csv_path, arcname=f"{model_name}.csv")
+        zip_path = tmp.name
+
+    tasks = BackgroundTasks()
+    tasks.add_task(os.remove, zip_path)
+    return FileResponse(zip_path, filename=f"{model_name}.zip", media_type="application/zip", background=tasks)
+
+# LLM
+# Global cache
+df = None
+precomputed_correlation = ""
+descriptions = []
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+index = None
+active_model_name = None
+
+def load_dataset_once():
+    global df, precomputed_correlation, descriptions, index, active_model_name
+
+    if not CONFIG_PATH.exists():
+        raise ValueError("No model selected. Please configure one in Settings.")
+
+    with open(CONFIG_PATH) as f:
+        config = json.load(f)
+
+    model_name = config.get("default_model")
+    if not model_name:
+        raise ValueError("No default model set in configuration.")
+
+    if model_name == active_model_name:
+        return  # Already loaded
+
+    dataset_path = DATASETS_FOLDER / f"{model_name}.csv"
+    if not dataset_path.exists():
+        raise FileNotFoundError(f"Dataset file '{dataset_path}' not found.")
+
+    df_local = pd.read_csv(dataset_path, sep=";")
+
+    # Precompute correlation and descriptions
+    precomputed = df_local.corr(numeric_only=True)['pue'].sort_values(ascending=False).to_string()
+    descs = []
+    for col in df_local.columns:
+        if col != "timestamp":
+            values = df_local[col].describe().to_dict()
+            desc = f"Column '{col}' has mean {values.get('mean', 0):.2f}, std {values.get('std', 0):.2f}, min {values.get('min', 0):.2f}, max {values.get('max', 0):.2f}"
+            descs.append(desc)
+
+    embeds = embedding_model.encode(descs, show_progress_bar=True)
+    idx = faiss.IndexFlatL2(embeds.shape[1])
+    idx.add(np.array(embeds))
+
+    # Cache globally
+    df = df_local
+    precomputed_correlation = precomputed
+    descriptions[:] = descs
+    index = idx
+    active_model_name = model_name
+
+# Request structure
+class AskRequest(BaseModel):
+    query: str
+    model: str = "phi"
+    stream: bool = False
+
+# Main endpoint
+@app.post("/pue/llm/ask", tags=["PUELLM"])
+async def ask_question(body: AskRequest, stream: bool = True):
+    try:
+        load_dataset_once()
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+    query = body.query
+    model = body.model
+    stream = body.stream
+
+    try:
+        lang = detect(query)
+    except:
+        lang = "en"
+
+    language_instruction = "Respond in English." if lang != "es" else "Responde en español."
+
+    question_embedding = embedding_model.encode([query])
+    distances, indices = index.search(np.array(question_embedding), 3)
+    retrieved_chunks = [descriptions[i] for i in indices[0]]
+    context = "\n".join(retrieved_chunks)
+
+    analysis_context = "\nCORRELATION WITH PUE:\n" + precomputed_correlation
+
+    # Add custom context based on query keywords
+    if "outlier" in query.lower():
+        for col in df.columns:
+            if col.lower() in query.lower():
+                q1 = df[col].quantile(0.25)
+                q3 = df[col].quantile(0.75)
+                iqr = q3 - q1
+                outliers = df[(df[col] < q1 - 1.5 * iqr) | (df[col] > q3 + 1.5 * iqr)]
+                analysis_context += f"\nOUTLIERS IN {col.upper()}:\n" + outliers[["timestamp", col]].head(10).to_string()
+                break
+
+    if "trend" in query.lower():
+        for col in df.columns:
+            if col.lower() in query.lower():
+                trend = df[["timestamp", col]].copy()
+                trend['timestamp'] = pd.to_datetime(trend['timestamp'])
+                trend = trend.set_index('timestamp').resample('D').mean().dropna()
+                analysis_context += f"\nDAILY TREND FOR {col.upper()}:\n" + trend.tail(10).to_string()
+                break
+
+    if "moving average" in query.lower() or "ma" in query.lower():
+        for col in df.columns:
+            if col.lower() in query.lower():
+                ma = df[["timestamp", col]].copy()
+                ma['timestamp'] = pd.to_datetime(ma['timestamp'])
+                ma = ma.set_index('timestamp').resample('H').mean().dropna()
+                ma['MA_6'] = ma[col].rolling(window=6).mean()
+                analysis_context += f"\nMOVING AVERAGE FOR {col.upper()}:\n" + ma[[col, 'MA_6']].tail(10).to_string()
+                break
+
+    full_context = context + "\n" + analysis_context
+
+    prompt = f"""You are an expert assistant in data center energy efficiency. You have access to real data and statistical summaries.
+
+CONTEXT:
+{full_context}
+
+Please answer the following question:
+{query}
+
+{language_instruction}
+"""
+
+    def generate():
+        try:
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={"model": model, "prompt": prompt, "stream": True},
+                stream=True,
+                timeout=120
+            )
+            update_llm_stats()
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        json_line = json.loads(line.decode("utf-8"))
+                        if json_line.get("response"):
+                            yield json.dumps({"response": json_line["response"]}) + "\n"
+                    except json.JSONDecodeError:
+                        continue
+        except Exception as e:
+            yield json.dumps({"response": f"[Error]: {str(e)}"}) + "\n"
+
+    if not stream:
+        chunks = []
+        for chunk in generate():
+            try:
+                json_obj = json.loads(chunk)
+                if 'response' in json_obj:
+                    chunks.append(json_obj['response'])
+            except Exception:
+                continue
+        return JSONResponse(content={"response": ''.join(chunks)})
+
+    return StreamingResponse(generate(), media_type="application/json")
+
+# Statistics update
+def update_llm_stats():
+    stats_path = Path(".config", "statistics.json")
+    Path(".config").mkdir(parents=True, exist_ok=True)
+
+    stats = {
+        "predictions_per_month": {},
+        "llm_questions": 0
+    }
+
+    if Path(stats_path):
+        try:
+            with open(stats_path, "r") as f:
+                content = f.read()
+                if content.strip():
+                    stats = json.loads(content)
+        except Exception:
+            pass
+
+    stats["llm_questions"] = stats.get("llm_questions", 0) + 1
+
+    with open(stats_path, "w") as f:
+        json.dump(stats, f, indent=2)
+
+
+# SETTINGS
+@app.post("/pue/set/default_model", tags=["PUESettings"])
+def set_default_model(model_name: str = Form(...)):
+    config_path = Path(".config", "config.json")
+    Path(".config").mkdir(parents=True, exist_ok=True)
+    with open(config_path, "w") as f:
+        json.dump({"default_model": model_name}, f)
+    return {"message": f"Default model set to '{model_name}'"}
+
+@app.get("/pue/set/default_model", tags=["PUESettings"])
+def get_default_model():
+    config_path = Path(".config", "config.json")
+    if not Path(config_path):
+        return {"default_model": ""}
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    return {"default_model": config.get("default_model", "")}
+
+@app.delete("/pue/set/delete_all", tags=["PUESettings"])
+def delete_all_models():
+    deleted = []
+    errors = []
+
+    folders = [
+        (MODEL_FOLDER, "*"),
+        (DATASETS_FOLDER, "*.csv"),
+        (SUMMARY_FOLDER, "*.json")
+    ]
+
+    for folder, pattern in folders:
+        for file in folder.glob(pattern):
+            try:
+                file.unlink()
+                deleted.append(str(file))
+            except Exception as e:
+                errors.append(f"Error deleting {file}: {str(e)}")
+
+    config_path = CONFIG_PATH
+    if config_path.exists():
+        try:
+            with open(config_path, "w") as f:
+                json.dump({"default_model": ""}, f)
+            deleted.append(str(config_path))
+        except Exception as e:
+            errors.append(f"Error resetting config: {str(e)}")
+
+    return {"deleted": deleted, "errors": errors}
+
+@app.get("/pue/set/download_all", tags=["PUESettings"])
+def download_all_models():
+    folders = [
+        (MODEL_FOLDER, "*"),
+        (DATASETS_FOLDER, "*.csv"),
+        (SUMMARY_FOLDER, "*.json"),
+    ]
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        with zipfile.ZipFile(tmp.name, "w") as zipf:
+            for folder, pattern in folders:
+                for file in folder.glob(pattern):
+                    arcname = folder / file.name
+                    zipf.write(file, arcname=arcname)
+
+        zip_path = tmp.name
+
+    tasks = BackgroundTasks()
+    tasks.add_task(os.remove, zip_path)
+    return FileResponse(zip_path, filename="all_models.zip", media_type="application/zip", background=tasks)
+
+
+# STATS
+@app.get("/pue/stats", tags=["PUEStats"])
+def get_statistics():
+    stats_path = Path(".config", "statistics.json")
+    if Path(stats_path):
+        with open(stats_path, "r") as f:
+            return json.load(f)
+    else:
+        return {"predictions_per_month": {}, "llm_questions": 0}
+    
+@app.get("/pue/stats/dashboard", tags=["PUEStats"])
+def get_dashboard_statistics():
+    summaries_path = "summaries"
+    stats_path = Path(".config", "statistics.json")
+
+    models = []
+    r2_list = []
+
+    # Read model summaries
+    if Path(summaries_path).exists():
+        for file in Path(summaries_path).iterdir():
+            if file.suffix == ".json":
+                try:
+                    with open(file) as f:
+                        data = json.load(f)
+                        model_name = file.stem
+                        r2 = data.get("metrics", {}).get("r2", 0)
+                        models.append(model_name)
+                        r2_list.append(r2)
+                except Exception:
+                    continue
+
+    # Load global usage statistics
+    stats = {
+        "predictions_per_month": {},
+        "llm_questions": 0
+    }
+    if Path(stats_path):
+        try:
+            with open(stats_path, "r") as f:
+                stats = json.load(f)
+        except Exception:
+            pass
+
+    # Calculate total predictions across all months
+    total_predictions = sum(stats.get("predictions_per_month", {}).values())
+
+    return {
+        "models_count": len(models),
+        "avg_accuracy": round(sum(r2_list) / len(r2_list), 4) if r2_list else 0.0,
+        "accuracy_by_model": [
+            {"model": model, "r2": round(r2_list[i], 4)} for i, model in enumerate(models)
+        ],
+        "total_predictions": total_predictions,
+        "predictions_by_month": stats.get("predictions_per_month", {}),
+        "llm_questions": stats.get("llm_questions", 0)
+    }

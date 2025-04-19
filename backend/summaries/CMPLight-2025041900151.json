@@ -1,0 +1,17 @@
+{
+  "model_name": "CMPLight-2025041900151",
+  "features": [
+    "ch1_compresor",
+    "temp10",
+    "temp11",
+    "ch1_t_ambiente",
+    "cgbt_energia_activa_total"
+  ],
+  "epochs": 50,
+  "test_size": 20.0,
+  "metrics": {
+    "loss": 0.0038091586902737617,
+    "mae": 0.04973653376735194,
+    "r2": 0.7245917648023074
+  }
+}
