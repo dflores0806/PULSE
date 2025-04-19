@@ -1,0 +1,44 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# Logs and temp
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Python test cache
+.pytest_cache/
+.cache/
+
+# Environment files
+.env
+*.env
+
+# Ignore model-related folders
+.config/
+datasets/
+models/
+summaries/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Mac/Linux system files
+.DS_Store
+Thumbs.db
