@@ -185,28 +185,72 @@ npm run dev
 
 ```mermaid
 flowchart TD
-    U[User uploads CSV] --> A[System analyzes features]
-    A --> B[User selects variables + config]
-    B --> C[Train model (NN)]
-    C --> D[Store model + summary]
-    D --> E[Manual Prediction or LLM]
-    E --> F[Dashboard updates stats + visuals]
+    A[Start] --> B{User Interface}
+    
+    B --> C1[📁 PUE Models]
+    C1 --> D1[📤 Upload or Load CSV]
+    D1 --> E1[🧠 Select Features]
+    E1 --> F1[🔁 Train Model]
+    F1 --> G1[💾 Save Model, Scaler, Summary]
+
+    B --> C2[📊 PUE Apps]
+    C2 --> D2[📝 Fill Inputs]
+    D2 --> E2[📈 Predict PUE]
+    E2 --> F2[📉 Display Charts & Stats]
+
+    C2 --> D3[💬 Ask Assistant]
+    D3 --> E3[📂 Load Model CSV]
+    E3 --> F3[🧠 Build Prompt with Context]
+    F3 --> G3[🤖 Query LLM Engine]
+    G3 --> H3[📡 Stream Response]
+    H3 --> I3[🧾 Display Answer]
+
+    B --> C3[⚙️ Settings]
+    C3 --> D4[✔️ Set Default Model]
+    C3 --> D5[🧹 Delete All]
+    C3 --> D6[📥 Download All]
+
+    G1 --> J[✅ Model Ready for Use]
+    F2 --> J
+    I3 --> J
+    D4 --> J
+
+    J --> K[🔁 Repeat or Exit]
+
 ```
 
 ## 🔁 Example sequence diagram
 
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant FE as Frontend
-    participant BE as Backend
-    participant ML as Model
-    U->>FE: Fill inputs & click Predict
-    FE->>BE: POST /pue/gen/predict
-    BE->>ML: model.predict(inputs)
-    ML-->>BE: Return predicted PUE
-    BE-->>FE: Return value
-    FE-->>U: Show chart & animation
+    participant User
+    participant Frontend
+    participant Backend
+    participant Model
+    participant Dataset
+    participant LLM as LLM Engine
+
+    %% PUE Prediction
+    User->>Frontend: Fill form & select model
+    Frontend->>Backend: GET /pue/set/default_model
+    Backend-->>Frontend: Return selected model
+
+    User->>Frontend: Click Predict
+    Frontend->>Backend: POST /pue/gen/predict
+    Backend->>Model: Load model
+    Backend->>Dataset: Load scaler & features
+    Model-->>Backend: Predict PUE
+    Backend-->>Frontend: Return prediction
+    Frontend-->>User: Show output & chart
+
+    %% LLM Assistant
+    User->>Frontend: Ask question to LLM
+    Frontend->>Backend: POST /pue/llm/ask
+    Backend->>Dataset: Load data context & stats
+    Backend->>LLM: Send prompt with context
+    LLM-->>Backend: Stream response
+    Backend-->>Frontend: Return streamed data
+    Frontend-->>User: Display answer in real-time
 ```
 
 ---
