@@ -23,6 +23,7 @@ import { CNavTitle } from '@coreui/react'
 import { AppSidebarNav } from './AppSidebarNav'
 
 import { logo } from 'src/assets/brand/logo'
+import PulseLogo from 'src/assets/brand/logo_b.png'
 import { sygnet } from 'src/assets/brand/sygnet'
 
 import { useModel } from '../context/ModelContext'
@@ -101,7 +102,8 @@ const AppSidebar = () => {
     >
       <CSidebarHeader className="border-bottom">
         <CSidebarBrand to="/">
-          <CIcon customClassName="sidebar-brand-full" icon={logo} height={32} />
+          {/*<CIcon customClassName="sidebar-brand-full" icon={logo} height={32} />*/}
+          <img src={PulseLogo} alt="PULSE" height={32} />
           <CIcon customClassName="sidebar-brand-narrow" icon={sygnet} height={32} />
         </CSidebarBrand>
         <CCloseButton
