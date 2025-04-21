@@ -125,7 +125,7 @@ const Settings = () => {
                 <hr />
                 <h6 className="text-muted">Advanced Settings (coming soon)</h6>
                 <ul>
-                    <li>Change languageqq</li>
+                    <li>Change language</li>
                     <li>Theme preferences</li>
                     <li>Debug mode toggle</li>
                     <li>Custom backend endpoint</li>

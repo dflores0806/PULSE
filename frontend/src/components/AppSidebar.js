@@ -17,6 +17,7 @@ import {
   cilMagnifyingGlass,
   cilChatBubble,
   cilMemory,
+  cibGithub
 } from '@coreui/icons'
 import { CNavTitle } from '@coreui/react'
 
@@ -86,6 +87,16 @@ const AppSidebar = () => {
       to: '/settings',
       icon: <CIcon icon={cilSettings} customClassName="nav-icon" />,
     },
+    {
+      component: CNavTitle,
+      name: 'Docs',
+    },
+    {
+      component: 'CNavItem',
+      name: 'GitHub',
+      to: 'https://github.com/dflores0806/PULSE',
+      icon: <CIcon icon={cibGithub} customClassName="nav-icon" />,
+    }
   ]
 
 
