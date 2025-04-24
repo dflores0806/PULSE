@@ -27,6 +27,18 @@ pulse/
     │   ├── components/
     │   └── context/
 ```
+
+---
+
+## ✅ PULSE Benefits
+
+- ⚡ Fully adaptive model training (custom dataset per use case)
+- 🔁 Seamless prediction workflow
+- 📊 Interactive visual feedback
+- 🤖 LLM integration for deeper data interaction
+- 🔐 Clean separation of backend/frontend
+- 📦 Easy deployment for research or operational use
+
 ---
 
 ## 📊 Activity Diagram
@@ -255,17 +267,6 @@ sequenceDiagram
 
 ---
 
-## ✅ PULSE Benefits
-
-- ⚡ Fully adaptive model training (custom dataset per use case)
-- 🔁 Seamless prediction workflow
-- 📊 Interactive visual feedback
-- 🤖 LLM integration for deeper data interaction
-- 🔐 Clean separation of backend/frontend
-- 📦 Easy deployment for research or operational use
-
----
-
 ## 🧱 Technology notes
 
 - The **frontend** is built using the open-source **[CoreUI React Admin Template](https://coreui.io/react/)** for responsive and elegant UI components.
@@ -275,7 +276,17 @@ sequenceDiagram
 
 ## 📎 License
 
-MIT License. Free for academic and commercial use.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)** license.
+
+You are free to:
+- Share — copy and redistribute the material in any medium or format
+- Adapt — remix, transform, and build upon the material
+
+Under the following terms:
+- **Attribution** — You must give appropriate credit.
+- **NonCommercial** — You may not use the material for commercial purposes.
+
+For full details, see the [license summary](https://creativecommons.org/licenses/by-nc/4.0/) or the [full legal text](https://creativecommons.org/licenses/by-nc/4.0/legalcode).
 
 ---
 
