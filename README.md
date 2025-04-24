@@ -41,7 +41,7 @@ pulse/
 
 ---
 
-## 📊 Activity Diagram
+## 📊 Architecture overview
 
 This diagram outlines the user's flow from opening the web app to receiving feedback:
 
