@@ -97,6 +97,7 @@ const Settings = () => {
                                         <CFormLabel>How to start the backend:</CFormLabel>
                                         <pre className="bg-light border rounded p-2 text-dark font-monospace">
                                             cd backend
+                                            <br/>
                                             uvicorn main:app --reload
                                         </pre>
                                     </div>

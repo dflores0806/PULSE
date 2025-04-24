@@ -52,6 +52,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create default .config if not exists
+os.makedirs(".config", exist_ok=True)
+
+if not os.path.exists(CONFIG_PATH):
+    with open(CONFIG_PATH, "w") as f:
+        json.dump({"default_model": None}, f)
+
 # PREDICTIONS
 stored_data = {}
 

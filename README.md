@@ -45,7 +45,7 @@ pulse/
 
 This diagram outlines the user's flow from opening the web app to receiving feedback:
 
-![Activity](images/PULSE-activities-diagram.png)
+![Activity](images/PULSE-architecture.png)
 
 ---
 

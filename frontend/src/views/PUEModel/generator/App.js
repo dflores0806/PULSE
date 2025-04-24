@@ -53,7 +53,7 @@ const GeneratorApp = () => {
               <CCol md={6}>
                 <div className="h-100 d-flex flex-column justify-content-center">
                   <strong>📋 Example CSV structure:</strong>
-                  <pre className="bg-dark p-2 rounded mb-0">
+                  <pre className="bg-light border rounded p-2 text-dark font-monospace">
                     timestamp;temperature;humidity;load;airflow;pue<br />
                     2023-01-01 00:00:00;24.5;40;70;1200;1.45<br />
                     2023-01-01 01:00:00;25.0;42;65;1180;1.42<br />
