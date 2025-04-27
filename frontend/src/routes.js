@@ -8,6 +8,7 @@ import Home from './views/Home/Home'
 import Settings from './views/Settings/Settings'
 import PUEModels from './views/PUEModel/PUEModel'
 import PUEModelGenerator from './views/PUEModel/generator/Generator'
+import PUEAutoModelWrapper from './views/PUEModel/generator/AutoMLWrapper'
 import PUEModelExplorer from './views/PUEModel/explorer/Explorer'
 import PUEApps from './views/PUEApps/PUEApps'
 import PUEAppsPredictor from './views/PUEApps/predictor/Predictor'
@@ -61,13 +62,13 @@ const Toasts = React.lazy(() => import('./views/notifications/toasts/Toasts'))
 const Widgets = React.lazy(() => import('./views/widgets/Widgets'))
 
 const routes = [
-
   { path: '/dashboard', name: 'Dashboard', element: Dashboard },
   { path: '/settings', name: 'Settings', element: Settings },
   { path: '/puemodels', name: 'PUE Models', element: PUEModelGenerator, exact: true },
   { path: '/puemodels/generator', name: 'Generator', element: PUEModelGenerator },
+  { path: '/puemodels/automl', name: 'Auto ML', element: PUEAutoModelWrapper },
   { path: '/puemodels/explorer', name: 'Explorer', element: PUEModelExplorer },
-  { path: '/PUEApps', name: 'PUE Monitoring', element: PUEApps},
+  { path: '/PUEApps', name: 'PUE Monitoring', element: PUEApps },
   { path: '/PUEApps/predictor', name: 'Predictor', element: PUEAppsPredictor },
   { path: '/PUEApps/llm', name: 'LLM', element: PUEAppsLLM },
 

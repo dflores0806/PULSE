@@ -1,5 +1,5 @@
 # 🌐 FastAPI & related
-from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -30,6 +30,10 @@ from datetime import datetime
 from pathlib import Path
 from datetime import datetime
 from langdetect import detect
+from typing import List
+import json
+import uuid
+import time
 
 
 CONFIG_PATH = Path(".config/config.json")
@@ -247,6 +251,132 @@ def get_example_input(
 
     row = df[features].dropna().sample(1).iloc[0]
     return {"example": row.to_dict()}
+
+@app.post("/pue/gen/automl_train", tags=["PUEModelGenerator"])
+async def automl_train_streaming(
+    model_name: str = Form(...),
+    features: str = Form(...),
+    epochs_options: str = Form(...),
+    test_size_options: str = Form(...)
+):
+    features = json.loads(features)
+    epochs_options = json.loads(epochs_options)
+    test_size_options = json.loads(test_size_options)
+
+    file_location = Path(DATASETS_FOLDER) / f"{model_name}.csv"
+    if not file_location.exists():
+        return {"error": "Dataset not found."}
+
+    df = pd.read_csv(file_location, sep=';')
+    df.columns = [col.lower() for col in df.columns]
+
+    X = df[features].values
+    y = df['pue'].values
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    async def model_generator():
+        for test_size in test_size_options:
+            X_train, X_test, y_train, y_test = train_test_split(
+                X_scaled, y, test_size=test_size/100, random_state=42
+            )
+
+            for epochs in epochs_options:
+                model = tf.keras.Sequential([
+                    tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
+                    tf.keras.layers.Dense(32, activation='relu'),
+                    tf.keras.layers.Dense(1)
+                ])
+                model.compile(optimizer='adam', loss='mse')
+                history = model.fit(X_train, y_train, epochs=epochs, batch_size=16, verbose=0)
+
+                y_pred = model.predict(X_test).flatten()
+                loss = history.history['loss'][-1]
+                mae = mean_absolute_error(y_test, y_pred)
+                r2 = r2_score(y_test, y_pred)
+
+                temp_id = str(uuid.uuid4())
+                temp_folder = Path("temp_models") / temp_id
+                temp_folder.mkdir(parents=True, exist_ok=True)
+
+                model.save(temp_folder / "model.h5", include_optimizer=False)
+                joblib.dump(scaler, temp_folder / "scaler.gz")
+
+                summary = {
+                    "model_name": model_name,
+                    "features": features,
+                    "epochs": epochs,
+                    "test_size": test_size,
+                    "metrics": {
+                        "loss": float(loss),
+                        "mae": float(mae),
+                        "r2": float(r2)
+                    }
+                }
+                with open(temp_folder / "summary.json", "w") as f:
+                    json.dump(summary, f, indent=2)
+
+                yield json.dumps({
+                    "temp_id": temp_id,
+                    "epochs": epochs,
+                    "test_size": test_size,
+                    "loss": round(float(loss), 6),
+                    "mae": round(float(mae), 6),
+                    "r2": round(float(r2), 6)
+                }) + "\n"
+
+    return StreamingResponse(model_generator(), media_type="application/json")
+
+
+class SaveAutoMLRequest(BaseModel):
+    model_temp_id: str
+    final_model_name: str
+
+@app.post("/pue/gen/save_automl_model", tags=["PUEModelGenerator"])
+async def save_automl_model(payload: SaveAutoMLRequest):
+    temp_id = payload.model_temp_id
+    final_name = payload.final_model_name
+
+    temp_folder = Path("temp_models") / temp_id
+    if not temp_folder.exists():
+        return {"error": "Temporary model not found."}
+
+    model_path = temp_folder / "model.h5"
+    scaler_path = temp_folder / "scaler.gz"
+    summary_path = temp_folder / "summary.json"
+
+    if not model_path.exists() or not scaler_path.exists() or not summary_path.exists():
+        return {"error": "Incomplete model files."}
+
+    model_dest = Path(MODEL_FOLDER) / f"{final_name}.h5"
+    scaler_dest = Path(MODEL_FOLDER) / f"{final_name}_scaler.gz"
+    summary_dest = Path(SUMMARY_FOLDER) / f"{final_name}.json"
+
+    os.makedirs(MODEL_FOLDER, exist_ok=True)
+    os.makedirs(SUMMARY_FOLDER, exist_ok=True)
+
+    shutil.copy(model_path, model_dest)
+    shutil.copy(scaler_path, scaler_dest)
+
+    # Actualizar nombre en summary
+    with open(summary_path) as f:
+        summary = json.load(f)
+    summary["model_name"] = final_name
+    with open(summary_dest, "w") as f:
+        json.dump(summary, f, indent=2)
+
+    # ⬇️ NUEVO: Copiar también el CSV
+    original_csv_path = Path(DATASETS_FOLDER) / f"{summary['model_name'].split('-')[0]}.csv"
+    final_csv_path = Path(DATASETS_FOLDER) / f"{final_name}.csv"
+    if original_csv_path.exists():
+        shutil.copy(original_csv_path, final_csv_path)
+
+    # ⬇️ NUEVO: Borrar carpeta temporal
+    shutil.rmtree(temp_folder)
+
+    return {"message": "Model saved successfully!"}
+
 
 @app.get("/pue/exp/models", tags=["PUEModelExplorer"])
 def list_models():

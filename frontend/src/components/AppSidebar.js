@@ -17,6 +17,7 @@ import {
   cilMagnifyingGlass,
   cilChatBubble,
   cilMemory,
+  cilSpeedometer,
   cibGithub
 } from '@coreui/icons'
 import { CNavTitle } from '@coreui/react'
@@ -49,13 +50,19 @@ const AppSidebar = () => {
     },
     {
       component: 'CNavItem',
-      name: 'Model Generator',
+      name: 'Model generator',
       to: '/puemodels/generator',
       icon: <CIcon icon={cilMemory} customClassName="nav-icon" />,
     },
     {
       component: 'CNavItem',
-      name: 'Model Explorer',
+      name: 'Auto ML generator',
+      to: '/puemodels/automl',
+      icon: <CIcon icon={cilSpeedometer} customClassName="nav-icon" />,
+    },
+    {
+      component: 'CNavItem',
+      name: 'Model explorer',
       to: '/puemodels/explorer',
       icon: <CIcon icon={cilMagnifyingGlass} customClassName="nav-icon" />,
     },

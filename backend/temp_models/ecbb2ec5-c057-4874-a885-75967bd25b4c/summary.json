@@ -1,0 +1,17 @@
+{
+  "model_name": "Test",
+  "features": [
+    "ch1_t_ambiente",
+    "temp10",
+    "temp11",
+    "ch1_compresor",
+    "hum10"
+  ],
+  "epochs": 5,
+  "test_size": 10,
+  "metrics": {
+    "loss": 0.002124123042449355,
+    "mae": 0.0321940010507982,
+    "r2": 0.8847423795170573
+  }
+}
