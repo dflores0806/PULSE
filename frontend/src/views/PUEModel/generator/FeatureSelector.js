@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Card, Form, Button, Alert, Spinner, Row, Col } from 'react-bootstrap';
@@ -16,14 +15,12 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    
     const formData = new FormData();
-    const API_BASE = import.meta.env.VITE_API_BASE_URL
+    const API_BASE = import.meta.env.VITE_API_BASE_URL;
     formData.append('model_name', modelName);
+
     axios.post(`${API_BASE}/pue/gen/suggest_features`, formData)
-    
       .then(res => {
-        console.log('Feature suggestions response:', res.data);
         setSuggested(res.data.suggested_features || []);
         setCorrelations(res.data.correlations || {});
         setSelected(res.data.suggested_features || []);
@@ -42,6 +39,15 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
         ? prev.filter(f => f !== feature)
         : [...prev, feature]
     );
+  };
+
+  const handleSelectAll = () => {
+    const allKeys = Object.keys(correlations).filter(k => k !== 'pue');
+    setSelected(allKeys);
+  };
+
+  const handleDeselectAll = () => {
+    setSelected([]);
   };
 
   const handleSubmit = () => {
@@ -69,21 +75,15 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
     responsive: true,
     indexAxis: 'y',
     scales: {
-      x: {
-        beginAtZero: true
-      },
+      x: { beginAtZero: true },
       y: {
         ticks: {
-          font: {
-            size: 10
-          }
+          font: { size: 10 }
         }
       }
     },
     plugins: {
-      legend: {
-        display: false
-      }
+      legend: { display: false }
     }
   };
 
@@ -101,6 +101,12 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
         ) : (
           <>
             {suggested.length === 0 && <Alert variant="warning">No suggestions found or no correlation available.</Alert>}
+
+            <div className="mb-3 d-flex gap-2">
+              <Button variant="primary" size="sm" onClick={handleSelectAll}>Select all</Button>
+              <Button variant="warning" size="sm" onClick={handleDeselectAll}>Deselect all</Button>
+            </div>
+
             <Form>
               <Row>
                 <Col md={6}>
@@ -127,9 +133,18 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
                 </Col>
               </Row>
             </Form>
-            <Button className="mt-3" onClick={handleSubmit}>Confirm Selection</Button>
+
+            <Button
+              className="mt-3"
+              onClick={handleSubmit}
+              disabled={selected.length === 0} // ✅ Confirm Selection disabled if no features
+            >
+              Confirm Selection
+            </Button>
+
             {status && <Alert variant="success" className="mt-3">{status}</Alert>}
             {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
+
             {correlationKeys.length > 0 && (
               <>
                 <hr />

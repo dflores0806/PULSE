@@ -615,3 +615,44 @@ def get_dashboard_statistics():
         "predictions_by_month": stats.get("predictions_per_month", {}),
         "llm_questions": stats.get("llm_questions", 0)
     }
+
+@app.delete("/pue/set/purge", tags=["PUESettings"])
+def purge_orphan_files():
+    deleted_files = []
+    errors = []
+
+    # Load valid models from summaries
+    valid_models = set()
+    if Path(SUMMARY_FOLDER).exists():
+        for summary_file in Path(SUMMARY_FOLDER).glob("*.json"):
+            model_name = summary_file.stem
+            valid_models.add(model_name)
+
+    # Check datasets folder
+    if Path(DATASETS_FOLDER).exists():
+        for csv_file in Path(DATASETS_FOLDER).glob("*.csv"):
+            model_name = csv_file.stem
+            if model_name not in valid_models:
+                try:
+                    csv_file.unlink()
+                    deleted_files.append(str(csv_file))
+                except Exception as e:
+                    errors.append(f"Error deleting {csv_file}: {str(e)}")
+
+    # Check models folder (.h5 and .gz)
+    if Path(MODEL_FOLDER).exists():
+        for model_file in Path(MODEL_FOLDER).glob("*"):
+            if model_file.suffix in [".h5", ".gz"]:
+                base_name = model_file.stem.replace("_scaler", "")
+                if base_name not in valid_models:
+                    try:
+                        model_file.unlink()
+                        deleted_files.append(str(model_file))
+                    except Exception as e:
+                        errors.append(f"Error deleting {model_file}: {str(e)}")
+
+    return {
+        "message": f"Purged orphaned files.",
+        "deleted": deleted_files,
+        "errors": errors
+    }
