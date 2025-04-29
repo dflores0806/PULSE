@@ -18,6 +18,7 @@ const AutoMLWrapper = () => {
   const [loading, setLoading] = useState(false)
   const [uploaded, setUploaded] = useState(false)
   const [error, setError] = useState('')
+  const [modelSaved, setModelSaved] = useState(false)
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL
 
@@ -35,7 +36,7 @@ const AutoMLWrapper = () => {
     setError('')
     try {
       await axios.post(`${API_BASE}/pue/gen/upload_data`, formData)
-      
+
       const suggestForm = new FormData()
       suggestForm.append('model_name', modelName)
       const res = await axios.post(`${API_BASE}/pue/gen/suggest_features`, suggestForm)
@@ -82,8 +83,8 @@ const AutoMLWrapper = () => {
           </>
         ) : (
           <>
-            <h5>Step 2: AutoML Training</h5>
-            <AutoMLGenerator modelName={modelName} suggestedFeatures={suggestedFeatures} />
+            {!modelSaved && <h5>Step 2: AutoML Training</h5>}
+            <AutoMLGenerator setModelSaved={setModelSaved} modelSaved={modelSaved} modelName={modelName} suggestedFeatures={suggestedFeatures} />
           </>
         )}
       </CCardBody>

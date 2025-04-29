@@ -17,7 +17,7 @@ import {
 } from '@coreui/react'
 import axios from 'axios'
 
-const AutoMLGenerator = ({ modelName, suggestedFeatures }) => {
+const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatures }) => {
   const [selectedFeatures, setSelectedFeatures] = useState(suggestedFeatures || [])
   const [epochsOptions, setEpochsOptions] = useState([50, 100, 200])
   const [testSizeOptions, setTestSizeOptions] = useState([10, 20, 30])
@@ -28,6 +28,9 @@ const AutoMLGenerator = ({ modelName, suggestedFeatures }) => {
   const [trainingProgress, setTrainingProgress] = useState([])
   const [isTraining, setIsTraining] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
+
+  const [savedSummary, setSavedSummary] = useState(null)
+
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL
 
@@ -89,8 +92,23 @@ const AutoMLGenerator = ({ modelName, suggestedFeatures }) => {
     try {
       await axios.post(`${API_BASE}/pue/gen/save_automl_model`, {
         model_temp_id: selected.temp_id,
-        final_model_name: finalModelName,
+        final_model_name: finalModelName
       })
+
+      // Guardamos resumen
+      setSavedSummary({
+        model_name: finalModelName,
+        features: selected.features || [],
+        epochs: selected.epochs,
+        test_size: selected.test_size,
+        metrics: {
+          loss: selected.loss,
+          mae: selected.mae,
+          r2: selected.r2
+        }
+      })
+      setModelSaved(true)
+
       alert(`✅ Model '${finalModelName}' saved successfully!`)
     } catch (err) {
       console.error(err)
@@ -98,99 +116,119 @@ const AutoMLGenerator = ({ modelName, suggestedFeatures }) => {
     }
   }
 
+
   return (
     <CCard className="mb-4">
-      <CCardHeader>AutoML Generator</CCardHeader>
       <CCardBody>
-        <h5>Select Predictive Features</h5>
-        <div className="mb-3">
-          {(suggestedFeatures || []).map((feat, idx) => (
-            <CFormCheck
-              key={idx}
-              type="checkbox"
-              label={feat}
-              checked={selectedFeatures.includes(feat)}
-              onChange={() =>
-                setSelectedFeatures((prev) =>
-                  prev.includes(feat) ? prev.filter((f) => f !== feat) : [...prev, feat],
-                )
-              }
-            />
-          ))}
-        </div>
 
-        <h5>Epochs Options</h5>
-        <CFormInput
-          type="text"
-          value={epochsOptions.join(',')}
-          onChange={(e) => setEpochsOptions(e.target.value.split(',').map(Number))}
-          className="mb-3"
-          placeholder="e.g., 50,100,200"
-        />
-
-        <h5>Test Size Options (%)</h5>
-        <CFormInput
-          type="text"
-          value={testSizeOptions.join(',')}
-          onChange={(e) => setTestSizeOptions(e.target.value.split(',').map(Number))}
-          className="mb-3"
-          placeholder="e.g., 10,20,30"
-        />
-
-        <CButton color="primary" onClick={startAutoMLTraining} className="mb-3">
-          {loading ? <CSpinner size="sm" /> : 'Start AutoML'}
-        </CButton>
-
-        {isTraining && (
-          <div className="mt-3">
-            <h5>Training Progress...</h5>
-            {trainingProgress.map((model, idx) => (
-              <div key={idx}>
-                Model {idx + 1}: Epochs {model.epochs}, Test size {model.test_size}% — R²:{' '}
-                {(model.r2 * 100).toFixed(2)}%
-              </div>
-            ))}
-          </div>
-        )}
-
-        {isFinished && trainingProgress.length > 0 && (
+        {!modelSaved ? (
           <>
-            <h5>Results</h5>
-            <CTable striped hover responsive>
-              <CTableHead>
-                <CTableRow>
-                  <CTableHeaderCell>Epochs</CTableHeaderCell>
-                  <CTableHeaderCell>Test Size (%)</CTableHeaderCell>
-                  <CTableHeaderCell>Loss</CTableHeaderCell>
-                  <CTableHeaderCell>MAE</CTableHeaderCell>
-                  <CTableHeaderCell>R² (%)</CTableHeaderCell>
-                  <CTableHeaderCell>Select</CTableHeaderCell>
-                </CTableRow>
-              </CTableHead>
-              <CTableBody>
-                {trainingProgress.map((model, idx) => (
-                  <CTableRow key={idx} active={bestIdx === idx}>
-                    <CTableDataCell>{model.epochs}</CTableDataCell>
-                    <CTableDataCell>{model.test_size}</CTableDataCell>
-                    <CTableDataCell>{model.loss.toFixed(6)}</CTableDataCell>
-                    <CTableDataCell>{model.mae.toFixed(6)}</CTableDataCell>
-                    <CTableDataCell>{(model.r2 * 100).toFixed(2)}</CTableDataCell>
-                    <CTableDataCell>
-                      <CFormCheck checked={bestIdx === idx} onChange={() => setBestIdx(idx)} />
-                    </CTableDataCell>
-                  </CTableRow>
-                ))}
-              </CTableBody>
-            </CTable>
-
-            <CButton color="success" onClick={handleSaveBestModel}>
-              Save Selected Model
+            <h5>Select Predictive Features</h5>
+            <div className="mb-3">
+              {(suggestedFeatures || []).map((feat, idx) => (
+                <CFormCheck
+                  key={idx}
+                  type="checkbox"
+                  label={feat}
+                  checked={selectedFeatures.includes(feat)}
+                  onChange={() =>
+                    setSelectedFeatures((prev) =>
+                      prev.includes(feat) ? prev.filter((f) => f !== feat) : [...prev, feat],
+                    )
+                  }
+                />
+              ))}
+            </div>
+            <h5>Epochs Options</h5>
+            <CFormInput
+              type="text"
+              value={epochsOptions.join(',')}
+              onChange={(e) => setEpochsOptions(e.target.value.split(',').map(Number))}
+              className="mb-3"
+              placeholder="e.g., 50,100,200"
+            />
+            <h5>Test Size Options (%)</h5>
+            <CFormInput
+              type="text"
+              value={testSizeOptions.join(',')}
+              onChange={(e) => setTestSizeOptions(e.target.value.split(',').map(Number))}
+              className="mb-3"
+              placeholder="e.g., 10,20,30"
+            />
+            <CButton color="primary" onClick={startAutoMLTraining} className="mb-3">
+              {loading ? <CSpinner size="sm" /> : 'Start AutoML'}
             </CButton>
+
+            {isTraining && (
+              <div className="mt-3">
+                <h5>Training Progress...</h5>
+                {trainingProgress.map((model, idx) => (
+                  <div key={idx}>
+                    Model {idx + 1}: Epochs {model.epochs}, Test size {model.test_size}% — R²: {(model.r2 * 100).toFixed(2)}%
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isFinished && trainingProgress.length > 0 && (
+              <>
+                <h5>Results</h5>
+                <CTable striped hover responsive>
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell>Epochs</CTableHeaderCell>
+                      <CTableHeaderCell>Test Size (%)</CTableHeaderCell>
+                      <CTableHeaderCell>Loss</CTableHeaderCell>
+                      <CTableHeaderCell>MAE</CTableHeaderCell>
+                      <CTableHeaderCell>R² (%)</CTableHeaderCell>
+                      <CTableHeaderCell>Select</CTableHeaderCell>
+                    </CTableRow>
+                  </CTableHead>
+                  <CTableBody>
+                    {trainingProgress.map((model, idx) => (
+                      <CTableRow key={idx} active={bestIdx === idx}>
+                        <CTableDataCell>{model.epochs}</CTableDataCell>
+                        <CTableDataCell>{model.test_size}</CTableDataCell>
+                        <CTableDataCell>{model.loss.toFixed(6)}</CTableDataCell>
+                        <CTableDataCell>{model.mae.toFixed(6)}</CTableDataCell>
+                        <CTableDataCell>{(model.r2 * 100).toFixed(2)}</CTableDataCell>
+                        <CTableDataCell>
+                          <CFormCheck checked={bestIdx === idx} onChange={() => setBestIdx(idx)} />
+                        </CTableDataCell>
+                      </CTableRow>
+                    ))}
+                  </CTableBody>
+                </CTable>
+                <CButton color="success" onClick={handleSaveBestModel}>
+                  Save Selected Model
+                </CButton>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="mt-4">
+              <h4>✅ Model Saved Successfully!</h4>
+              <CCard className="mb-4">
+                <CCardHeader>Model Summary</CCardHeader>
+                <CCardBody>
+                  <p><strong>Model Name:</strong> {savedSummary.model_name}</p>
+                  <p><strong>Features:</strong> {savedSummary.features.join(', ')}</p>
+                  <p><strong>Epochs:</strong> {savedSummary.epochs}</p>
+                  <p><strong>Test Size:</strong> {savedSummary.test_size}%</p>
+                  <p><strong>Loss:</strong> {savedSummary.metrics.loss.toFixed(6)}</p>
+                  <p><strong>MAE:</strong> {savedSummary.metrics.mae.toFixed(6)}</p>
+                  <p><strong>R²:</strong> {(savedSummary.metrics.r2 * 100).toFixed(2)}%</p>
+                </CCardBody>
+              </CCard>
+            </div>
           </>
         )}
+
       </CCardBody>
     </CCard>
   )
+
 }
 
 export default AutoMLGenerator

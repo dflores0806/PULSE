@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import {
     CCard, CCardBody, CCardHeader, CFormSelect, CSpinner,
-    CButton, CAlert, CBadge, CListGroup, CListGroupItem
+    CButton, CAlert, CBadge, CListGroup, CListGroupItem,
+    CNav, CNavItem, CNavLink, CTabContent, CTabPane, CTabs, CTabList, CTab, CTabPanel
 } from '@coreui/react'
 import {
     cilDescription, cilMemory, cilGraph, cilTrash
 } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
 import axios from 'axios'
-
 import { Container, Row } from 'react-bootstrap'
-
+import DataTable from 'react-data-table-component'
 
 const ExplorerApp = () => {
     const [models, setModels] = useState([])
@@ -19,9 +19,15 @@ const ExplorerApp = () => {
     const [deleted, setDeleted] = useState(false)
     const [error, setError] = useState('')
     const [summaries, setSummaries] = useState([])
-    const API_BASE = import.meta.env.VITE_API_BASE_URL
-
     const [defaultModel, setDefaultModel] = useState('')
+
+    const [datasetSample, setDatasetSample] = useState([])
+    const [datasetSummary, setDatasetSummary] = useState(null)
+    const [datasetHistogram, setDatasetHistogram] = useState(null)
+    const [columns, setColumns] = useState([])
+    const [activeTab, setActiveTab] = useState('summary')
+
+    const API_BASE = import.meta.env.VITE_API_BASE_URL
 
     useEffect(() => {
         axios.get(`${API_BASE}/pue/set/default_model`)
@@ -45,7 +51,6 @@ const ExplorerApp = () => {
         if (models.length > 0) fetchSummaries()
     }, [models])
 
-
     useEffect(() => {
         axios.get(`${API_BASE}/pue/exp/models`).then(res => {
             setModels(res.data.models || [])
@@ -55,7 +60,27 @@ const ExplorerApp = () => {
     useEffect(() => {
         if (selected) {
             axios.get(`${API_BASE}/pue/exp/summary/${selected}`)
-                .then(res => setSummary(res.data))
+                .then(async (res) => {
+                    setSummary(res.data)
+                    try {
+                        const datasetFileName = res.data.dataset_name || `${res.data.model_name}.csv`;
+
+                        const datasetResponse = await axios.get(`${API_BASE}/pue/datasets/load/${datasetFileName}`);
+                        setDatasetSample(datasetResponse.data.sample);
+                        setDatasetSummary(datasetResponse.data.summary);
+                        setColumns(datasetResponse.data.columns.map(col => ({
+                            name: col,
+                            selector: row => row[col],
+                            sortable: true,
+                        })));
+
+                        const plotResponse = await axios.get(`${API_BASE}/pue/datasets/plots/${datasetFileName}`);
+                        setDatasetHistogram(plotResponse.data.histogram);
+                    } catch (err) {
+                        console.error('Error loading dataset or plot:', err)
+                    }
+
+                })
                 .catch(() => setSummary(null))
         }
     }, [selected])
@@ -115,48 +140,68 @@ const ExplorerApp = () => {
                 </CFormSelect>
 
                 {summary && (
-                    <CCard>
-                        <CCardHeader className="d-flex justify-content-between align-items-center">
-                            <span><CIcon icon={cilDescription} className="me-2" />Model Summary</span>
-                            <div className="d-flex gap-2 ms-auto">
-                                <CButton
-                                    color="danger"
-                                    size="sm"
-                                    onClick={handleDelete}
-                                    disabled={selected === defaultModel}
-                                >
-                                    <CIcon icon={cilTrash} className="me-1" />Delete
-                                </CButton>
-
-                                <CButton color="info" size="sm" className="ms-2" onClick={() => {
-                                    const link = document.createElement('a')
-                                    link.href = `${API_BASE}/pue/exp/download/${selected}.zip`
-                                    link.download = `${selected}.zip`
-                                    document.body.appendChild(link)
-                                    link.click()
-                                    document.body.removeChild(link)
-                                }}>
-                                    <CIcon icon={cilDescription} className="me-1" />Download
-                                </CButton>
-                            </div>
-
-
-                        </CCardHeader>
-                        <CCardBody>
-                            <p>
-                                <strong><CIcon icon={cilMemory} className="me-2" />Model:</strong> {summary.model_name}
-                                {summary.model_name === defaultModel && (
-                                    <span className="ms-2 badge bg-success">Active</span>
-                                )}
-                            </p>
-                            <p><strong><CIcon icon={cilGraph} className="me-2" />Features:</strong> {summary.features.join(', ')}</p>
-                            <p><strong>Epochs:</strong> {summary.epochs}</p>
-                            <p><strong>Test size:</strong> {summary.test_size}%</p>
-                            <p><strong>Loss:</strong> {summary.metrics.loss}</p>
-                            <p><strong>MAE:</strong> {summary.metrics.mae}</p>
-                            <p><strong>R²:</strong> {summary.metrics.r2.toFixed(4)} ({(summary.metrics.r2 * 100).toFixed(2)}%)</p>
-                        </CCardBody>
-                    </CCard>
+                    <>
+                        <CCard>
+                            <CTabs activeItemKey="model_summary">
+                                <CTabList variant="tabs">
+                                    <CTab itemKey="model_summary">Model summary</CTab>
+                                    <CTab itemKey="dataset_viewer">Dataset viewer</CTab>
+                                </CTabList>
+                                <CTabContent>
+                                    <CTabPanel className="p-3" itemKey="model_summary">
+                                        <div className="d-flex justify-content-between align-items-center mb-3">
+                                            <h5><CIcon icon={cilDescription} className="me-2" />Model Summary</h5>
+                                            <div className="d-flex gap-2">
+                                                <CButton color="danger" size="sm" onClick={handleDelete} disabled={selected === defaultModel}>
+                                                    <CIcon icon={cilTrash} className="me-1" />Delete
+                                                </CButton>
+                                                <CButton color="info" size="sm" onClick={() => {
+                                                    const link = document.createElement('a')
+                                                    link.href = `${API_BASE}/pue/exp/download/${selected}.zip`
+                                                    link.download = `${selected}.zip`
+                                                    document.body.appendChild(link)
+                                                    link.click()
+                                                    document.body.removeChild(link)
+                                                }}>
+                                                    <CIcon icon={cilDescription} className="me-1" />Download
+                                                </CButton>
+                                            </div>
+                                        </div>
+                                        <p><strong><CIcon icon={cilMemory} className="me-2" />Model:</strong> {summary.model_name} {summary.model_name === defaultModel && (<span className="ms-2 badge bg-success">Active</span>)}</p>
+                                        <p><strong><CIcon icon={cilGraph} className="me-2" />Features:</strong> {summary.features.join(', ')}</p>
+                                        <p><strong>Epochs:</strong> {summary.epochs}</p>
+                                        <p><strong>Test size:</strong> {summary.test_size}%</p>
+                                        <p><strong>Loss:</strong> {summary.metrics.loss}</p>
+                                        <p><strong>MAE:</strong> {summary.metrics.mae}</p>
+                                        <p><strong>R²:</strong> {summary.metrics.r2.toFixed(4)} ({(summary.metrics.r2 * 100).toFixed(2)}%)</p>
+                                    </CTabPanel>
+                                    <CTabPanel className="p-3" itemKey="dataset_viewer">
+                                        <h5><CIcon icon={cilDescription} className="me-2" />Dataset viewer</h5>
+                                        <DataTable
+                                            columns={columns}
+                                            data={datasetSample}
+                                            pagination
+                                            striped
+                                            highlightOnHover
+                                            dense
+                                        />
+                                        <h5 className="mt-4">Dataset statistics</h5>
+                                        <pre>{JSON.stringify(datasetSummary, null, 2)}</pre>
+                                        {datasetHistogram && (
+                                            <div className="text-center mt-4">
+                                                <h5>Histogram</h5>
+                                                <img
+                                                    src={`data:image/png;base64,${datasetHistogram}`}
+                                                    alt="Histogram"
+                                                    style={{ maxWidth: '100%', borderRadius: '8px' }}
+                                                />
+                                            </div>
+                                        )}
+                                    </CTabPanel>
+                                </CTabContent>
+                            </CTabs>
+                        </CCard>
+                    </>
                 )}
 
                 {selected && !summary && <CSpinner />}
@@ -164,7 +209,7 @@ const ExplorerApp = () => {
 
                 {summaries.length > 0 && (
                     <div className="mt-4">
-                        <h5>All Models Summary</h5>
+                        <h5>All models summary</h5>
                         <div className="table-responsive">
                             <table className="table table-striped table-bordered">
                                 <thead>
@@ -180,9 +225,7 @@ const ExplorerApp = () => {
                                 <tbody>
                                     {summaries.map((s, idx) => (
                                         <tr key={idx}>
-                                            <td>{s.name} {s.name === defaultModel && (
-                                                <span className="ms-2 badge bg-success">Active</span>
-                                            )}</td>
+                                            <td>{s.name} {s.name === defaultModel && (<span className="ms-2 badge bg-success">Active</span>)}</td>
                                             <td>{s.epochs ?? '-'}</td>
                                             <td>{s.test_size ?? '-'}</td>
                                             <td>{s.metrics?.loss.toFixed(4) ?? '-'}</td>
@@ -195,7 +238,6 @@ const ExplorerApp = () => {
                         </div>
                     </div>
                 )}
-
             </Row>
         </Container>
     )
