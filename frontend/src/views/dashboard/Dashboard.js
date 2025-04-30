@@ -184,7 +184,7 @@ const Dashboard = () => {
                 <CCol md={4}>
                     <CWidgetStatsF
                         icon={<CIcon icon={cilSettings} height={24} />}
-                        title="PUE Model Generator"
+                        title="PUE Model generator"
                         value="Train your own PUE prediction model"
                         footer={<a href="#/puemodels/generator">Go to generator</a>}
                     />
@@ -192,7 +192,7 @@ const Dashboard = () => {
                 <CCol md={4}>
                     <CWidgetStatsF
                         icon={<CIcon icon={cilMagnifyingGlass} height={24} />}
-                        title="Model Explorer"
+                        title="Model explorer"
                         value="Manage and inspect trained models"
                         footer={<a href="#/puemodels/explorer">View models</a>}
                     />

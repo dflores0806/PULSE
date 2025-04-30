@@ -5,6 +5,7 @@ import { Bar } from 'react-chartjs-2'
 import { Chart, registerables } from 'chart.js'
 import { cilCheck, cilCheckCircle, cilXCircle } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
+import { CCol, CRow } from '@coreui/react'
 
 Chart.register(...registerables)
 
@@ -119,34 +120,22 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
             </div>
 
             <Form>
-              <Row>
-                <Col md={6}>
-                  {left.map((feature, idx) => (
+              <CRow className="mb-3">
+                {[...left, ...right].map((feature, idx) => (
+                  <CCol xs={12} md={3} key={idx}>
                     <Form.Check
-                      key={idx}
                       type="checkbox"
                       label={feature}
                       checked={selected.includes(feature)}
                       onChange={() => handleToggle(feature)}
                     />
-                  ))}
-                </Col>
-                <Col md={6}>
-                  {right.map((feature, idx) => (
-                    <Form.Check
-                      key={half + idx}
-                      type="checkbox"
-                      label={feature}
-                      checked={selected.includes(feature)}
-                      onChange={() => handleToggle(feature)}
-                    />
-                  ))}
-                </Col>
-              </Row>
+                  </CCol>
+                ))}
+              </CRow>
             </Form>
 
             <Button className="mt-3" onClick={handleSubmit} disabled={selected.length === 0}>
-              <CIcon icon={cilCheck} className="me-2" /> Confirm Selection
+              <CIcon icon={cilCheck} className="me-2" /> Confirm selection
             </Button>
 
             {status && (
@@ -163,7 +152,7 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
             {correlationKeys.length > 0 && (
               <>
                 <hr />
-                <h5>Correlation Chart</h5>
+                <h5>Correlation chart</h5>
                 <div style={{ overflowX: 'auto' }}>
                   <Bar data={correlationData} options={chartOptions} />
                 </div>

@@ -24,7 +24,7 @@ function ModelSummary({ modelName, features, epochs, testSize, metrics }) {
   return (
     <Card className="mb-4">
       <Card.Body>
-        <Card.Title>📊 Model Training Summary</Card.Title>
+        <Card.Title>📊 Model training summary</Card.Title>
         <ListGroup variant="flush">
           <ListGroup.Item>
             <strong>Model name:</strong> {modelName}

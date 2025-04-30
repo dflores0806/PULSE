@@ -6,7 +6,7 @@ import PredictorApp from './App.js'
 const PUEAppsPredictor = () => {
   return (
     <CCard className="mb-4">
-      <CCardHeader>PUE Monitoring Predictor</CCardHeader>
+      <CCardHeader>PUE predictor</CCardHeader>
       <CCardBody>
         <PredictorApp></PredictorApp>
       </CCardBody>

@@ -26,7 +26,7 @@ const ScenarioResult = ({ currentPUE, simulatedPUE }) => {
         datalabels: {
           anchor: 'center',
           align: 'right',
-          color: '#000',
+          color: '#FFF',
           formatter: value => value.toFixed(2)
         }
       }
@@ -41,14 +41,8 @@ const ScenarioResult = ({ currentPUE, simulatedPUE }) => {
       legend: { display: false },
       title: {
         display: true,
-        text: 'PUE Comparison',
+        text: 'PUE comparison',
         font: { size: 16 }
-      },
-      datalabels: {
-        anchor: 'center',
-        align: 'right',
-        color: '#000',
-        formatter: value => value.toFixed(2)
       }
     },
     scales: {

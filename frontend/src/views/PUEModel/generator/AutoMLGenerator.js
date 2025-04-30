@@ -14,8 +14,12 @@ import {
   CTableRow,
   CTableHeaderCell,
   CTableDataCell,
+  CCol,
+  CRow,
 } from '@coreui/react'
 import axios from 'axios'
+import { cilMediaPlay, cilSave } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
 
 const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatures }) => {
   const [selectedFeatures, setSelectedFeatures] = useState(suggestedFeatures || [])
@@ -30,7 +34,6 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
   const [isFinished, setIsFinished] = useState(false)
 
   const [savedSummary, setSavedSummary] = useState(null)
-
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL
 
@@ -92,7 +95,7 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
     try {
       await axios.post(`${API_BASE}/pue/gen/save_automl_model`, {
         model_temp_id: selected.temp_id,
-        final_model_name: finalModelName
+        final_model_name: finalModelName,
       })
 
       // Guardamos resumen
@@ -104,8 +107,8 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
         metrics: {
           loss: selected.loss,
           mae: selected.mae,
-          r2: selected.r2
-        }
+          r2: selected.r2,
+        },
       })
       setModelSaved(true)
 
@@ -116,30 +119,30 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
     }
   }
 
-
   return (
     <CCard className="mb-4">
       <CCardBody>
-
         {!modelSaved ? (
           <>
-            <h5>Select Predictive Features</h5>
-            <div className="mb-3">
+            <h5>Select predictive features</h5>
+            <CRow className="mb-3">
               {(suggestedFeatures || []).map((feat, idx) => (
-                <CFormCheck
-                  key={idx}
-                  type="checkbox"
-                  label={feat}
-                  checked={selectedFeatures.includes(feat)}
-                  onChange={() =>
-                    setSelectedFeatures((prev) =>
-                      prev.includes(feat) ? prev.filter((f) => f !== feat) : [...prev, feat],
-                    )
-                  }
-                />
+                <CCol xs={6} md={3} key={idx}>
+                  <CFormCheck
+                    type="checkbox"
+                    label={feat}
+                    checked={selectedFeatures.includes(feat)}
+                    onChange={() =>
+                      setSelectedFeatures((prev) =>
+                        prev.includes(feat) ? prev.filter((f) => f !== feat) : [...prev, feat],
+                      )
+                    }
+                  />
+                </CCol>
               ))}
-            </div>
-            <h5>Epochs Options</h5>
+            </CRow>
+
+            <h5>Epochs options</h5>
             <CFormInput
               type="text"
               value={epochsOptions.join(',')}
@@ -147,7 +150,7 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
               className="mb-3"
               placeholder="e.g., 50,100,200"
             />
-            <h5>Test Size Options (%)</h5>
+            <h5>Test size options (%)</h5>
             <CFormInput
               type="text"
               value={testSizeOptions.join(',')}
@@ -156,15 +159,22 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
               placeholder="e.g., 10,20,30"
             />
             <CButton color="primary" onClick={startAutoMLTraining} className="mb-3">
-              {loading ? <CSpinner size="sm" /> : 'Start AutoML'}
+              {loading ? (
+                <CSpinner size="sm" />
+              ) : (
+                <>
+                  <CIcon icon={cilMediaPlay} className="me-2" /> Start AutoML
+                </>
+              )}
             </CButton>
 
             {isTraining && (
               <div className="mt-3">
-                <h5>Training Progress...</h5>
+                <h5>Training progress...</h5>
                 {trainingProgress.map((model, idx) => (
                   <div key={idx}>
-                    Model {idx + 1}: Epochs {model.epochs}, Test size {model.test_size}% — R²: {(model.r2 * 100).toFixed(2)}%
+                    Model {idx + 1}: Epochs {model.epochs}, Test size {model.test_size}% — R²:{' '}
+                    {(model.r2 * 100).toFixed(2)}%
                   </div>
                 ))}
               </div>
@@ -200,7 +210,7 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
                   </CTableBody>
                 </CTable>
                 <CButton color="success" onClick={handleSaveBestModel}>
-                  Save Selected Model
+                  <CIcon icon={cilSave} className="me-2" /> Save selected model
                 </CButton>
               </>
             )}
@@ -212,23 +222,35 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
               <CCard className="mb-4">
                 <CCardHeader>Model Summary</CCardHeader>
                 <CCardBody>
-                  <p><strong>Model Name:</strong> {savedSummary.model_name}</p>
-                  <p><strong>Features:</strong> {savedSummary.features.join(', ')}</p>
-                  <p><strong>Epochs:</strong> {savedSummary.epochs}</p>
-                  <p><strong>Test Size:</strong> {savedSummary.test_size}%</p>
-                  <p><strong>Loss:</strong> {savedSummary.metrics.loss.toFixed(6)}</p>
-                  <p><strong>MAE:</strong> {savedSummary.metrics.mae.toFixed(6)}</p>
-                  <p><strong>R²:</strong> {(savedSummary.metrics.r2 * 100).toFixed(2)}%</p>
+                  <p>
+                    <strong>Model Name:</strong> {savedSummary.model_name}
+                  </p>
+                  <p>
+                    <strong>Features:</strong> {savedSummary.features.join(', ')}
+                  </p>
+                  <p>
+                    <strong>Epochs:</strong> {savedSummary.epochs}
+                  </p>
+                  <p>
+                    <strong>Test Size:</strong> {savedSummary.test_size}%
+                  </p>
+                  <p>
+                    <strong>Loss:</strong> {savedSummary.metrics.loss.toFixed(6)}
+                  </p>
+                  <p>
+                    <strong>MAE:</strong> {savedSummary.metrics.mae.toFixed(6)}
+                  </p>
+                  <p>
+                    <strong>R²:</strong> {(savedSummary.metrics.r2 * 100).toFixed(2)}%
+                  </p>
                 </CCardBody>
               </CCard>
             </div>
           </>
         )}
-
       </CCardBody>
     </CCard>
   )
-
 }
 
 export default AutoMLGenerator

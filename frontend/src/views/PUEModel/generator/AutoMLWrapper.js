@@ -56,7 +56,7 @@ const AutoMLWrapper = () => {
 
   return (
     <CCard className="mb-4">
-      <CCardHeader>AutoML Generator Setup</CCardHeader>
+      <CCardHeader>AutoML generator</CCardHeader>
 
       <CCardBody>
         <CAlert color="info">
@@ -96,7 +96,7 @@ const AutoMLWrapper = () => {
           </>
         ) : (
           <>
-            {!modelSaved && <h5>Step 2: AutoML Training</h5>}
+            {!modelSaved && <h5>Step 2: AutoML training</h5>}
             <AutoMLGenerator setModelSaved={setModelSaved} modelSaved={modelSaved} modelName={modelName} suggestedFeatures={suggestedFeatures} />
           </>
         )}

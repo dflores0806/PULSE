@@ -137,7 +137,7 @@ function PredictionForm({ features, modelName, onPredictionSuccess, onPrediction
             )}
           </Button>
           <Button type="button" variant="secondary" onClick={(e) => handleFillExample(e)}>
-            <CIcon icon={cilInput} className="me-2" /> Fill Example
+            <CIcon icon={cilInput} className="me-2" /> Fill example
           </Button>
         </div>
 

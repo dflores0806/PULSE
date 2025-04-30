@@ -6,7 +6,7 @@ import GeneratorApp from './App.js'
 const PUEModelGenerator = () => {
   return (
     <CCard className="mb-4">
-      <CCardHeader>PUE Model Generator</CCardHeader>
+      <CCardHeader>PUE Model generator</CCardHeader>
       <CCardBody>
         <GeneratorApp></GeneratorApp>
       </CCardBody>

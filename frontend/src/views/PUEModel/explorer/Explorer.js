@@ -6,7 +6,7 @@ import ExplorerApp from './App.js'
 const PUEModelExplorer = () => {
   return (
     <CCard className="mb-4">
-      <CCardHeader>PUE Model Explorer</CCardHeader>
+      <CCardHeader>PUE Model explorer</CCardHeader>
       <CCardBody>
         <ExplorerApp></ExplorerApp>
       </CCardBody>
