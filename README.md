@@ -129,25 +129,34 @@ npm run dev
 
 ## 📡 API endpoints summary
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/pue/gen/upload_data` | Upload user-provided CSV file |
-| POST | `/pue/gen/load_sample` | Load a built-in sample file |
-| POST | `/pue/gen/suggest_features` | Automatically suggest best input variables |
-| POST | `/pue/gen/train_model` | Train model with selected features |
-| POST | `/pue/gen/predict` | Predict PUE from manual input |
-| POST | `/pue/gen/example_input` | Return real input example from data |
-| GET | `/pue/exp/models` | List all stored models |
-| GET | `/pue/exp/summary/{model_name}` | Get metadata for a model |
-| DELETE | `/pue/exp/delete/{model_name}` | Remove model and associated files |
-| GET | `/pue/exp/download/{model_name}.zip` | Download model + scaler + CSV |
-| POST | `/pue/llm/ask` | Ask a question using LLM engine |
-| GET | `/pue/set/default_model` | Fetch currently selected model |
-| POST | `/pue/set/default_model` | Update active model |
-| DELETE | `/pue/set/delete_all` | Remove all stored models |
-| GET | `/pue/set/download_all` | Download all models in one zip |
-| GET | `/pue/stats` | Get app-wide usage statistics |
-| GET | `/pue/stats/dashboard` | Dashboard-ready metrics
+| Method | Endpoint                          | Description                |
+|--------|-----------------------------------|----------------------------|
+| POST   | `/pue/gen/upload_data`            | Upload Data                |
+| POST   | `/pue/gen/load_sample`            | Load Sample                |
+| POST   | `/pue/gen/suggest_features`       | Suggest Features           |
+| POST   | `/pue/gen/train_model`            | Train Model                |
+| POST   | `/pue/gen/predict`                | Predict PUE                |
+| POST   | `/pue/gen/example_input`          | Get Example Input          |
+| POST   | `/pue/gen/automl_train`           | AutoML Train Streaming     |
+| POST   | `/pue/gen/save_automl_model`      | Save AutoML Model          |
+| POST   | `/pue/gen/simulation/delete`      | Simulation Delete          |
+| POST   | `/pue/exp/simulations/clear`             | Simulations Clear         |
+| GET    | `/pue/exp/models`                        | List Models               |
+| GET    | `/pue/exp/summary/{model_name}`          | Get Model Summary         |
+| DELETE | `/pue/exp/delete/{model_name}`           | Delete Model              |
+| GET    | `/pue/exp/download/{model_name}.zip`     | Download Model Zip        |
+| GET    | `/pue/datasets/list`                     | List Datasets             |
+| GET    | `/pue/datasets/load/{dataset_name}`      | Load Dataset              |
+| POST   | `/pue/datasets/filter`                   | Filter Dataset            |
+| GET    | `/pue/datasets/plots/{dataset_name}`     | Generate Plots            |
+| POST   | `/pue/llm/ask`     | Ask Question    |
+| GET    | `/pue/set/default_model`      | Get Default Model       |
+| POST   | `/pue/set/default_model`      | Set Default Model       |
+| DELETE | `/pue/set/delete_all`         | Delete All Models       |
+| GET    | `/pue/set/download_all`       | Download All Models     |
+| DELETE | `/pue/set/purge`              | Purge Orphan Files      |
+| GET    | `/pue/stats`           | Get Statistics        |
+| GET    | `/pue/stats/dashboard` | Get Dashboard Stats   |
 
 ---
 
@@ -166,7 +175,11 @@ npm run dev
     - Suggest and select features
     - Train model (epochs, test size)
     - Save with timestamped name
-
+- #### 🤖 Auto ML Generator
+    - Upload and analyze dataset structure
+    - Automatically select optimal input features
+    - Run automated model training pipeline
+    - Review suggested configuration before saving
 - #### 🔍 Explorer
     - View all models with summary
     - Table with filter/sort
@@ -178,7 +191,13 @@ npm run dev
     - Form built dynamically from model summary
     - "Fill Example" button
     - Predict and show result (value + bar graph + animation)
-
+- #### 🧪 Scenario Simulator
+    - Fill inputs from real examples
+    - Modify inputs to explore what-if scenarios
+    - Compare original vs simulated PUE (horizontal bar chart)
+    - Save simulations with timestamp and inputs
+    - View, re-run, delete or clear simulations
+    - Visualize simulation history
  - #### 💬 LLM Assistant
     - Ask questions about input features, optimization, cooling
     - Context-aware answers based on current model
@@ -190,6 +209,7 @@ npm run dev
 - App version display
 - Delete all models and CSVs
 - Download all in one ZIP
+- Purge orphaned files (e.g. outdated summaries or scalers)
 
 ---
 

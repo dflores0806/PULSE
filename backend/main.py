@@ -497,7 +497,96 @@ def download_model_zip(model_name: str):
 
     tasks = BackgroundTasks()
     tasks.add_task(os.remove, zip_path)
-    return FileResponse(zip_path, filename=f"{model_name}.zip", media_type="application/zip", background=tasks)
+    return FileResponse(zip_path, filename=f"{model_name}.zip", media_type="application/zip", background=tasks)     
+
+# DATASETS
+@app.get("/pue/datasets/list", tags=["PUEDatasets"])
+async def list_datasets():
+    datasets_path = Path("datasets")
+    datasets = [f.name for f in datasets_path.glob("*.csv")]
+    return {"datasets": datasets}
+
+@app.get("/pue/datasets/load/{dataset_name}", tags=["PUEDatasets"])
+async def load_dataset(dataset_name: str):
+    dataset_path = Path("datasets") / dataset_name
+    if not dataset_path.exists():
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    df = pd.read_csv(dataset_path, sep=';')
+    
+    sample = df.head(100).to_dict(orient="records")
+    summary = df.describe().to_dict()
+
+    return {
+        "sample": sample,
+        "summary": summary,
+        "columns": df.columns.tolist()
+    }
+	
+class FilterRequest(BaseModel):
+    dataset_name: str
+    filters: List[dict]  # Cada filtro: {"column": "temp", "operator": ">", "value": 25}
+
+@app.post("/pue/datasets/filter", tags=["PUEDatasets"])
+async def filter_dataset(request: FilterRequest):
+    dataset_path = Path("datasets") / request.dataset_name
+    if not dataset_path.exists():
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    df = pd.read_csv(dataset_path, sep=';')
+
+    for f in request.filters:
+        column, operator, value = f["column"], f["operator"], f["value"]
+        if operator == ">":
+            df = df[df[column] > value]
+        elif operator == "<":
+            df = df[df[column] < value]
+        elif operator == "==":
+            df = df[df[column] == value]
+        elif operator == ">=":
+            df = df[df[column] >= value]
+        elif operator == "<=":
+            df = df[df[column] <= value]
+        elif operator == "!=":
+            df = df[df[column] != value]
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported operator {operator}")
+
+    filtered_sample = df.head(100).to_dict(orient="records")
+    return {
+        "filtered_sample": filtered_sample,
+        "total_rows": len(df)
+    }
+
+@app.get("/pue/datasets/plots/{dataset_name}", tags=["PUEDatasets"])
+async def generate_plots(dataset_name: str):
+    dataset_path = Path("datasets") / dataset_name
+    if not dataset_path.exists():
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    # Important: specify separator ; to correctly parse your CSV
+    df = pd.read_csv(dataset_path, sep=';')
+
+    numeric_df = df.select_dtypes(include=['number'])
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    if numeric_df.empty:
+        # Generate a simple image indicating no numerical data
+        ax.text(0.5, 0.5, 'No numerical columns available to plot.', 
+                horizontalalignment='center', verticalalignment='center', 
+                fontsize=12, transform=ax.transAxes)
+        ax.set_axis_off()
+    else:
+        numeric_df.hist(ax=ax)
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    histogram_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+
+    return {"histogram": histogram_base64}
 
 # LLM
 # Global cache
@@ -681,96 +770,7 @@ def update_llm_stats():
 
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)
-        
-
-# DATASETS
-@app.get("/pue/datasets/list", tags=["PUEDatasets"])
-async def list_datasets():
-    datasets_path = Path("datasets")
-    datasets = [f.name for f in datasets_path.glob("*.csv")]
-    return {"datasets": datasets}
-
-@app.get("/pue/datasets/load/{dataset_name}", tags=["PUEDatasets"])
-async def load_dataset(dataset_name: str):
-    dataset_path = Path("datasets") / dataset_name
-    if not dataset_path.exists():
-        raise HTTPException(status_code=404, detail="Dataset not found")
-
-    df = pd.read_csv(dataset_path, sep=';')
-    
-    sample = df.head(100).to_dict(orient="records")
-    summary = df.describe().to_dict()
-
-    return {
-        "sample": sample,
-        "summary": summary,
-        "columns": df.columns.tolist()
-    }
-	
-class FilterRequest(BaseModel):
-    dataset_name: str
-    filters: List[dict]  # Cada filtro: {"column": "temp", "operator": ">", "value": 25}
-
-@app.post("/pue/datasets/filter", tags=["PUEDatasets"])
-async def filter_dataset(request: FilterRequest):
-    dataset_path = Path("datasets") / request.dataset_name
-    if not dataset_path.exists():
-        raise HTTPException(status_code=404, detail="Dataset not found")
-
-    df = pd.read_csv(dataset_path, sep=';')
-
-    for f in request.filters:
-        column, operator, value = f["column"], f["operator"], f["value"]
-        if operator == ">":
-            df = df[df[column] > value]
-        elif operator == "<":
-            df = df[df[column] < value]
-        elif operator == "==":
-            df = df[df[column] == value]
-        elif operator == ">=":
-            df = df[df[column] >= value]
-        elif operator == "<=":
-            df = df[df[column] <= value]
-        elif operator == "!=":
-            df = df[df[column] != value]
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported operator {operator}")
-
-    filtered_sample = df.head(100).to_dict(orient="records")
-    return {
-        "filtered_sample": filtered_sample,
-        "total_rows": len(df)
-    }
-
-@app.get("/pue/datasets/plots/{dataset_name}", tags=["PUEDatasets"])
-async def generate_plots(dataset_name: str):
-    dataset_path = Path("datasets") / dataset_name
-    if not dataset_path.exists():
-        raise HTTPException(status_code=404, detail="Dataset not found")
-
-    # Important: specify separator ; to correctly parse your CSV
-    df = pd.read_csv(dataset_path, sep=';')
-
-    numeric_df = df.select_dtypes(include=['number'])
-
-    fig, ax = plt.subplots(figsize=(10, 10))
-
-    if numeric_df.empty:
-        # Generate a simple image indicating no numerical data
-        ax.text(0.5, 0.5, 'No numerical columns available to plot.', 
-                horizontalalignment='center', verticalalignment='center', 
-                fontsize=12, transform=ax.transAxes)
-        ax.set_axis_off()
-    else:
-        numeric_df.hist(ax=ax)
-
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    histogram_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    plt.close(fig)
-
-    return {"histogram": histogram_base64}
+  
 
 # SETTINGS
 @app.post("/pue/set/default_model", tags=["PUESettings"])
