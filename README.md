@@ -30,7 +30,7 @@ pulse/
 
 ---
 
-## ✅ PULSE Benefits
+## ✅ PULSE benefits
 
 - ⚡ Fully adaptive model training (custom dataset per use case)
 - 🔁 Seamless prediction workflow
@@ -70,9 +70,9 @@ This diagram outlines the user's flow from opening the web app to receiving feed
 
 ---
 
-## ⚙️ Installation Ggide
+## ⚙️ Installation guide
 
-### Backend Setup
+### Backend setup
 
 ```bash
 cd backend
@@ -106,7 +106,7 @@ Docs: http://localhost:8000/docs
 
 ---
 
-### Frontend Setup
+### Frontend setup
 
 ```bash
 cd frontend
@@ -175,7 +175,7 @@ npm run dev
     - Suggest and select features
     - Train model (epochs, test size)
     - Save with timestamped name
-- #### 🤖 Auto ML Generator
+- #### 🤖 Auto ML generator
     - Upload and analyze dataset structure
     - Automatically select optimal input features
     - Run automated model training pipeline
@@ -187,18 +187,18 @@ npm run dev
 
 ### 🧪 PUE Apps
 
- - #### 🎯 Manual Predictor
+ - #### 🎯 Manual predictor
     - Form built dynamically from model summary
     - "Fill Example" button
     - Predict and show result (value + bar graph + animation)
-- #### 🧪 Scenario Simulator
+- #### 🧪 Scenario simulator
     - Fill inputs from real examples
     - Modify inputs to explore what-if scenarios
     - Compare original vs simulated PUE (horizontal bar chart)
     - Save simulations with timestamp and inputs
     - View, re-run, delete or clear simulations
     - Visualize simulation history
- - #### 💬 LLM Assistant
+ - #### 💬 LLM assistant
     - Ask questions about input features, optimization, cooling
     - Context-aware answers based on current model
 
