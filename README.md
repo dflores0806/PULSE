@@ -218,36 +218,54 @@ npm run dev
 ```mermaid
 flowchart TD
     A[Start] --> B{User Interface}
-    
+
     B --> C1[📁 PUE Models]
-    C1 --> D1[📤 Upload or Load CSV]
-    D1 --> E1[🧠 Select Features]
-    E1 --> F1[🔁 Train Model]
-    F1 --> G1[💾 Save Model, Scaler, Summary]
+    C1 --> D1[🧱 Model Generator]
+    D1 --> D1a[📤 Upload or load CSV]
+    D1a --> D1b[🧠 Select features]
+    D1b --> D1c[🔁 Train model]
+    D1c --> D1d[💾 Save model, scaler, summary]
+
+    C1 --> D2[🤖 AutoML Generator]
+    D2 --> D2a[📤 Upload CSV]
+    D2a --> D2b[⚙️ Auto analyze & train]
+    D2b --> D1d
+
+    C1 --> D3[🔍 Model explorer]
+    D3 --> D3a[📄 View summary + metrics]
+    D3 --> D3b[📊 Explore dataset + plots]
+    D3 --> D3c[🧪 Review simulations]
 
     B --> C2[📊 PUE Apps]
-    C2 --> D2[📝 Fill Inputs]
-    D2 --> E2[📈 Predict PUE]
-    E2 --> F2[📉 Display Charts & Stats]
+    C2 --> E1[🎯 Predictor]
+    E1 --> E1a[📝 Fill inputs]
+    E1a --> E1b[📈 Predict PUE]
+    E1b --> E1c[📉 Display results]
 
-    C2 --> D3[💬 Ask Assistant]
-    D3 --> E3[📂 Load Model CSV]
-    E3 --> F3[🧠 Build Prompt with Context]
-    F3 --> G3[🤖 Query LLM Engine]
-    G3 --> H3[📡 Stream Response]
-    H3 --> I3[🧾 Display Answer]
+    C2 --> E2[🧪 Simulator]
+    E2 --> E2a[🧾 Load scenario inputs]
+    E2a --> E2b[🔁 Modify inputs]
+    E2b --> E2c[📊 Compare current vs simulated]
+    E2c --> E2d[🗂️ View, save or delete history]
+
+    C2 --> E3[💬 LLM Assistant]
+    E3 --> E3a[📂 Load model context]
+    E3a --> E3b[🤖 Ask question]
+    E3b --> E3c[📡 Stream response]
 
     B --> C3[⚙️ Settings]
-    C3 --> D4[✔️ Set Default Model]
-    C3 --> D5[🧹 Delete All]
-    C3 --> D6[📥 Download All]
+    C3 --> F1[✔️ Set default model]
+    C3 --> F2[🧹 Purge files]
+    C3 --> F3[🗑️ Delete all]
+    C3 --> F4[📥 Download all]
 
-    G1 --> J[✅ Model Ready for Use]
-    F2 --> J
-    I3 --> J
-    D4 --> J
+    D1d --> G[✅ Model ready]
+    E1c --> G
+    E2c --> G
+    E3c --> G
+    F1 --> G
 
-    J --> K[🔁 Repeat or Exit]
+    G --> H[🔁 Repeat or exit]
 
 ```
 
@@ -260,20 +278,39 @@ sequenceDiagram
     participant Backend
     participant Model
     participant Dataset
-    participant LLM as LLM Engine
+    participant LLM as LLM engine
 
-    %% PUE Prediction
+    %% Manual Prediction
     User->>Frontend: Fill form & select model
     Frontend->>Backend: GET /pue/set/default_model
     Backend-->>Frontend: Return selected model
 
-    User->>Frontend: Click Predict
+    User->>Frontend: Click predict
     Frontend->>Backend: POST /pue/gen/predict
     Backend->>Model: Load model
     Backend->>Dataset: Load scaler & features
     Model-->>Backend: Predict PUE
     Backend-->>Frontend: Return prediction
     Frontend-->>User: Show output & chart
+
+    %% Scenario Simulation
+    User->>Frontend: Click fill scenario
+    Frontend->>Backend: GET /pue/exp/summary/{model}
+    Backend-->>Frontend: Return dataset sample
+    Frontend->>Backend: POST /pue/gen/predict (with example)
+    Backend->>Model: Predict with selected inputs
+    Model-->>Backend: Return simulated PUE
+    Backend-->>Frontend: Return result
+    Frontend-->>User: Compare PUE & save simulation
+
+    %% AutoML
+    User->>Frontend: Upload dataset for AutoML
+    Frontend->>Backend: POST /pue/gen/automl_train
+    Backend->>Dataset: Analyze structure & correlations
+    Backend->>Model: Auto-train multiple configurations
+    Model-->>Backend: Return best performing model
+    User->>Frontend: Click Save Model
+    Frontend->>Backend: POST /pue/gen/save_automl_model
 
     %% LLM Assistant
     User->>Frontend: Ask question to LLM
@@ -283,6 +320,7 @@ sequenceDiagram
     LLM-->>Backend: Stream response
     Backend-->>Frontend: Return streamed data
     Frontend-->>User: Display answer in real-time
+
 ```
 
 ---
