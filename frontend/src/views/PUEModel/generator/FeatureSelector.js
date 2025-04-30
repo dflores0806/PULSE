@@ -3,6 +3,9 @@ import axios from 'axios';
 import { Card, Form, Button, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { Bar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
+import { cilCheck, cilCheckCircle, cilXCircle } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
+
 
 Chart.register(...registerables);
 
@@ -103,8 +106,13 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
             {suggested.length === 0 && <Alert variant="warning">No suggestions found or no correlation available.</Alert>}
 
             <div className="mb-3 d-flex gap-2">
-              <Button variant="primary" size="sm" onClick={handleSelectAll}>Select all</Button>
-              <Button variant="warning" size="sm" onClick={handleDeselectAll}>Deselect all</Button>
+              <Button variant="primary" size="sm" onClick={handleSelectAll}>
+                <CIcon icon={cilCheckCircle} className="me-2" /> Select all
+              </Button>
+
+              <Button variant="warning" size="sm" onClick={handleDeselectAll}>
+                <CIcon icon={cilXCircle} className="me-2" /> Deselect all
+              </Button>
             </div>
 
             <Form>
@@ -137,10 +145,11 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
             <Button
               className="mt-3"
               onClick={handleSubmit}
-              disabled={selected.length === 0} // ✅ Confirm Selection disabled if no features
+              disabled={selected.length === 0}
             >
-              Confirm Selection
+              <CIcon icon={cilCheck} className="me-2" /> Confirm Selection
             </Button>
+
 
             {status && <Alert variant="success" className="mt-3">{status}</Alert>}
             {error && <Alert variant="danger" className="mt-3">{error}</Alert>}

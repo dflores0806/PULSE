@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { CCard, CRow, CCol, CFormSelect, CFormLabel, CButton, CBadge } from '@coreui/react'
+import { CCard, CRow, CCol, CFormSelect, CFormLabel, CButton, CBadge, CAlert } from '@coreui/react'
 import axios from 'axios'
 import { Container, Row } from 'react-bootstrap'
+import CIcon from '@coreui/icons-react'
+import { cilRecycle, cilCloudDownload, cilTrash, cilCheckCircle } from '@coreui/icons'
+
 
 const Settings = () => {
   const [models, setModels] = useState([])
@@ -82,12 +85,10 @@ const Settings = () => {
   return (
     <Container className="mb-4">
       <Row>
-        <CCard className="mb-4 border-info">
-          <p>
-            Set de default settings for the PUSLE platform. Also, you can check the connection with
-            the server, download and delete all models.
-          </p>
-        </CCard>
+        <CAlert color="info">
+          Set de default settings for the PUSLE platform. Also, you can check the connection with
+          the server, download and delete all models.
+        </CAlert>
         <CRow className="mb-4">
           <CCol sm={6}>
             <CFormLabel>Select default model</CFormLabel>
@@ -116,7 +117,7 @@ const Settings = () => {
               onClick={handleSetActive}
               disabled={!selected}
             >
-              Set as default
+              <CIcon icon={cilCheckCircle} className="me-2" /> Set as default
             </CButton>
           </CCol>
           <CCol sm={6}>
@@ -154,7 +155,7 @@ const Settings = () => {
           <CCol>
             <div>Remove orphaned files</div>
             <CButton color="warning" onClick={handlePurge}>
-              🧹 Purge unused files
+              <CIcon icon={cilRecycle} className="me-2" /> Purge unused files
             </CButton>
           </CCol>
         </CRow>
@@ -163,7 +164,7 @@ const Settings = () => {
           <CCol>
             <div>Download all trained models, datasets, and summaries</div>
             <CButton color="info" onClick={handleDownloadAll}>
-              📦 Download all models
+              <CIcon icon={cilCloudDownload} className="me-2" /> Download all models
             </CButton>
           </CCol>
         </CRow>
@@ -172,7 +173,7 @@ const Settings = () => {
           <CCol>
             <div>Permanently delete all models and training data</div>
             <CButton color="danger" onClick={handleDeleteAll}>
-              🗑️ Delete all models
+              <CIcon icon={cilTrash} className="me-2" /> Delete all models
             </CButton>
           </CCol>
         </CRow>

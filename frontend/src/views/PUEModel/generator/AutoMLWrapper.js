@@ -10,6 +10,9 @@ import {
 } from '@coreui/react'
 import axios from 'axios'
 import AutoMLGenerator from './AutoMLGenerator'
+import { cilCloudUpload } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
+
 
 const AutoMLWrapper = () => {
   const [file, setFile] = useState(null)
@@ -54,8 +57,11 @@ const AutoMLWrapper = () => {
   return (
     <CCard className="mb-4">
       <CCardHeader>AutoML Generator Setup</CCardHeader>
-      <CCardBody>
 
+      <CCardBody>
+        <CAlert color="info">
+          The AutoML functionality automatically selects the most relevant features and optimal training parameters to build a predictive model for PUE estimation. Once a dataset is uploaded, the system analyzes correlations, tests various feature subsets and model configurations, and selects the best-performing combination based on predefined metrics. This process is launched through the AutoML training endpoint and results in a ready-to-use model, which can be saved and integrated into other components like the simulation engine or predictor module.
+        </CAlert>
         {!uploaded ? (
           <>
             <h5>Step 1: Upload your dataset</h5>
@@ -76,7 +82,14 @@ const AutoMLWrapper = () => {
             />
 
             <CButton color="primary" onClick={handleUpload}>
-              {loading ? <CSpinner size="sm" /> : 'Upload and Analyze'}
+              {loading ? (
+                <>
+                  <CSpinner size="sm" /> Uploading</>
+              ) : (
+                <>
+                  <CIcon icon={cilCloudUpload} className="me-2" /> Upload and analyze
+                </>
+              )}
             </CButton>
 
             {error && <CAlert color="danger" className="mt-3">{error}</CAlert>}

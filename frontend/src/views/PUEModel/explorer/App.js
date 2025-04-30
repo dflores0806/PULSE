@@ -102,20 +102,19 @@ const ExplorerApp = () => {
     return (
         <Container className="mb-4">
             <Row>
-                <CCard className="mb-4 border-info">
+                <CAlert color="info">
                     <p>This section allows you to:</p>
-
                     <CListGroup flush className="mb-3">
-                        <CListGroupItem>
+                        <CListGroupItem color="white">
                             🔍 Select and view detailed summaries of your trained models
                         </CListGroupItem>
-                        <CListGroupItem>
+                        <CListGroupItem color="white">
                             🧾 Inspect <strong>features</strong>, <strong>training configuration</strong>, and performance metrics like <strong>loss</strong>, <strong>MAE</strong>, and <strong>R²</strong>
                         </CListGroupItem>
-                        <CListGroupItem>
+                        <CListGroupItem color="white">
                             📥 Download trained models including the scaler and dataset in a ZIP file
                         </CListGroupItem>
-                        <CListGroupItem>
+                        <CListGroupItem color="white">
                             🗑️ Delete models <em>(except for the currently active one)</em>
                         </CListGroupItem>
                     </CListGroup>
@@ -123,8 +122,8 @@ const ExplorerApp = () => {
                     <p className="mb-0">
                         The active model is marked with a <CBadge color="success">Active</CBadge> badge and cannot be deleted.
                     </p>
-                    <p></p>
-                </CCard>
+                </CAlert>
+
                 <CFormSelect className="mb-3" value={selected} onChange={e => {
                     const value = e.target.value
                     setSelected(e.target.value)

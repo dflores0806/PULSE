@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
+import { cilCloudUpload } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
 
 function UploadCSV({ onUploadSuccess, modelName }) {
   const [file, setFile] = useState(null);
@@ -13,7 +15,7 @@ function UploadCSV({ onUploadSuccess, modelName }) {
     setFile(e.target.files[0]);
   };
 
-  
+
   const handleLoadSample = async () => {
     const formData = new FormData();
     formData.append('model_name', modelName);
@@ -56,9 +58,9 @@ function UploadCSV({ onUploadSuccess, modelName }) {
           <Form.Control type="file" accept=".csv" onChange={handleFileChange} />
         </Form.Group>
         <div className="d-flex gap-2 mt-2">
-  <Button onClick={handleUpload}>Upload</Button>
-  {/*<Button variant="outline-secondary" onClick={handleLoadSample}>Load sample</Button>*/}
-</div>
+          <Button onClick={handleUpload}> <CIcon icon={cilCloudUpload} className="me-2" /> Upload</Button>
+          {/*<Button variant="outline-secondary" onClick={handleLoadSample}>Load sample</Button>*/}
+        </div>
         {status && <Alert variant="success" className="mt-3">{status}</Alert>}
         {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
       </Card.Body>

@@ -8,6 +8,9 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Titl
 import { motion } from 'framer-motion'
 import { Container, Row } from 'react-bootstrap'
 
+import CIcon from '@coreui/icons-react'
+import { cilInput, cilMediaPlay } from '@coreui/icons'
+
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Title)
 
 import axios from 'axios'
@@ -63,6 +66,7 @@ const PredictorApp = () => {
         const formData = new FormData()
         formData.append('model_name', model)
         formData.append('input', JSON.stringify({ values: inputs }))
+        formData.append('save_simulation', 'true')
 
         axios.post(`${import.meta.env.VITE_API_BASE_URL}/pue/gen/predict`, formData)
             .then(res => {
@@ -78,12 +82,11 @@ const PredictorApp = () => {
     return (
         <Container className="mb-4">
             <Row>
-                <CCard className="mb-4 border-info">
-                    <p>
-                        This module allows you to manually enter input values for the features used by your trained model and instantly obtain the predicted Power Usage Effectiveness (PUE).
-                        You can use the “Fill Example” button to load a real sample from your dataset, modify any values, and click “Predict” to visualize the result and assess energy performance.
-                    </p>
-                </CCard>
+
+                <CAlert color="info">
+                    Here you can manually enter input values for the features used by your trained model and instantly obtain the predicted PUE.
+                    You can use the “Fill Example” button to load a real sample from your dataset, modify any values, and click "Predict" to visualize the result and assess energy performance.
+                </CAlert>
                 {error && <CAlert color="danger">{error}</CAlert>}
                 <CRow className="mb-3">
                     {features.map((f, i) => (
@@ -98,15 +101,17 @@ const PredictorApp = () => {
                     ))}
                 </CRow>
 
-
                 <CRow className="mb-3">
                     <CCol>
-                        <CButton type="button" color="secondary" onClick={handleFillExample}>Fill Example</CButton>
-                        <CButton type="button" className="ms-3" color="primary" onClick={handleSubmit}>Predict</CButton>
+                        <CButton type="button" color="primary" onClick={handleSubmit}>
+                            <CIcon icon={cilMediaPlay} className="me-2" /> Predict
+                        </CButton>
+
+                        <CButton type="button" className="ms-3" color="secondary" onClick={handleFillExample}>
+                            <CIcon icon={cilInput} className="me-2" /> Fill Example
+                        </CButton>
                     </CCol>
                 </CRow>
-
-
 
                 {result !== null && (
                     <>

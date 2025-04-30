@@ -29,6 +29,7 @@
     "@popperjs/core": "^2.11.8",
     "axios": "^1.8.4",
     "chart.js": "^4.4.7",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "classnames": "^2.5.1",
     "core-js": "^3.40.0",
     "framer-motion": "^12.7.3",

@@ -32,8 +32,9 @@ const GeneratorApp = () => {
   return (
     <Container className="mb-4">
       <Row>
-        <CCard className="mb-4 border-info">
-          <p>
+        <CAlert color="info">
+
+        <p>
             This module allows you to upload a dataset in CSV format, select relevant input features,
             and train a deep learning model for PUE prediction. The trained model can then be used in other sections of the platform.
           </p>
@@ -62,6 +63,9 @@ const GeneratorApp = () => {
               </CCol>
             </CRow>
           </CCardBody>
+        </CAlert>
+        <CCard className="mb-4 border-info">
+          
         </CCard>
 
         <Col md={10} className="mx-auto">

@@ -11,6 +11,7 @@ import PUEModelGenerator from './views/PUEModel/generator/Generator'
 import PUEAutoModelWrapper from './views/PUEModel/generator/AutoMLWrapper'
 import PUEModelExplorer from './views/PUEModel/explorer/Explorer'
 import PUEApps from './views/PUEApps/PUEApps'
+import PUEAppsSimulator from './views/PUEApps/simulator/ScenarioSimulator'
 import PUEAppsPredictor from './views/PUEApps/predictor/Predictor'
 import PUEAppsLLM from './views/PUEApps/llm/LLM'
 
@@ -70,6 +71,7 @@ const routes = [
   { path: '/puemodels/explorer', name: 'Explorer', element: PUEModelExplorer },
   { path: '/PUEApps', name: 'PUE Monitoring', element: PUEApps },
   { path: '/PUEApps/predictor', name: 'Predictor', element: PUEAppsPredictor },
+  { path: '/PUEApps/simulator', name: 'Simulator', element: PUEAppsSimulator },
   { path: '/PUEApps/llm', name: 'LLM', element: PUEAppsLLM },
 
   { path: '/', exact: true, name: 'Home' },

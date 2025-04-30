@@ -178,23 +178,24 @@ def train_model(
 @app.post("/pue/gen/predict", tags=["PUEModelGenerator"])
 def predict_pue(
     input: str = Form(...),
-    model_name: str = Form(...)
+    model_name: str = Form(...),
+    save_simulation: bool = Form(False)
 ):
     input_data = json.loads(input)
     model_path = Path(MODEL_FOLDER, f'{model_name}.h5')
     scaler_path = Path(MODEL_FOLDER, f'{model_name}_scaler.gz')
-    if not Path(model_path) or not Path(scaler_path):
+
+    if not model_path.exists() or not scaler_path.exists():
         return {"error": "Model not trained yet."}
 
     model = tf.keras.models.load_model(model_path)
-    
     if not hasattr(model, 'predict'):
         raise RuntimeError("Model loaded is not ready for prediction.")
 
     scaler = joblib.load(scaler_path)
 
     summary_path = Path(SUMMARY_FOLDER, f"{model_name}.json")
-    if not Path(summary_path):
+    if not summary_path.exists():
         return {"error": "Summary not found."}
 
     with open(summary_path) as f:
@@ -207,9 +208,30 @@ def predict_pue(
     values = [input_data['values'][feat] for feat in features]
     X = scaler.transform([values])
     prediction = model.predict(X)[0][0]
+    prediction = round(float(prediction), 4)
+
     update_prediction_stats()
-    
-    return {"pue_prediction": round(float(prediction), 4)}
+
+    # Save if required
+    if save_simulation:
+        simulations = summary.get("simulations", [])
+        next_id = max((s.get("id", 0) for s in simulations), default=0) + 1
+
+        simulations.append({
+            "id": next_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "inputs": input_data['values'],
+            "pue": prediction
+        })
+
+        summary["simulations"] = simulations
+
+        with open(summary_path, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+
+    print(prediction)
+
+    return {"pue_prediction": prediction}
 
 def update_prediction_stats():
     
@@ -364,23 +386,61 @@ async def save_automl_model(payload: SaveAutoMLRequest):
     shutil.copy(model_path, model_dest)
     shutil.copy(scaler_path, scaler_dest)
 
-    # Actualizar nombre en summary
     with open(summary_path) as f:
         summary = json.load(f)
     summary["model_name"] = final_name
     with open(summary_dest, "w") as f:
         json.dump(summary, f, indent=2)
 
-    # ⬇️ NUEVO: Copiar también el CSV
     original_csv_path = Path(DATASETS_FOLDER) / f"{summary['model_name'].split('-')[0]}.csv"
     final_csv_path = Path(DATASETS_FOLDER) / f"{final_name}.csv"
     if original_csv_path.exists():
         shutil.copy(original_csv_path, final_csv_path)
 
-    # ⬇️ NUEVO: Borrar carpeta temporal
     shutil.rmtree(temp_folder)
 
     return {"message": "Model saved successfully!"}
+
+@app.post("/pue/gen/simulation/delete", tags=["PUEModelGenerator"])
+async def simulation_delete(model_name: str = Form(...), sim_id: int = Form(...)):
+    summary_path = Path(SUMMARY_FOLDER) / f"{model_name}.json"
+
+    if not summary_path.exists():
+        return {"error": "Summary not found."}
+
+    with open(summary_path, "r", encoding="utf-8") as f:
+        summary = json.load(f)
+
+    simulations = summary.get("simulations", [])
+    initial_count = len(simulations)
+
+    summary["simulations"] = [s for s in simulations if s.get("id") != sim_id]
+
+    if len(summary["simulations"]) == initial_count:
+        return {"error": f"Simulation with id {sim_id} not found."}
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    return {"message": f"Simulation {sim_id} deleted successfully."}
+
+@app.post("/pue/exp/simulations/clear", tags=["PUEModelExplorer"])
+async def simulations_clear(model_name: str = Form(...)):
+    summary_path = Path(SUMMARY_FOLDER) / f"{model_name}.json"
+
+    if not summary_path.exists():
+        return {"error": "Summary not found."}
+
+    with open(summary_path, "r", encoding="utf-8") as f:
+        summary = json.load(f)
+
+    if "simulations" in summary:
+        summary["simulations"] = []
+
+        with open(summary_path, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+
+    return {"message": "All simulations cleared."}
 
 
 @app.get("/pue/exp/models", tags=["PUEModelExplorer"])
@@ -636,7 +696,7 @@ async def load_dataset(dataset_name: str):
     if not dataset_path.exists():
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    df = pd.read_csv(dataset_path)
+    df = pd.read_csv(dataset_path, sep=';')
     
     sample = df.head(100).to_dict(orient="records")
     summary = df.describe().to_dict()
@@ -657,7 +717,7 @@ async def filter_dataset(request: FilterRequest):
     if not dataset_path.exists():
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    df = pd.read_csv(dataset_path)
+    df = pd.read_csv(dataset_path, sep=';')
 
     for f in request.filters:
         column, operator, value = f["column"], f["operator"], f["value"]

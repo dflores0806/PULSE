@@ -1,5 +1,8 @@
 import React from 'react';
 import { Card, Button, ListGroup } from 'react-bootstrap';
+import { cilDescription, cilCloudDownload } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
+
 
 function ModelSummary({ modelName, features, epochs, testSize, metrics }) {
   const API_BASE = import.meta.env.VITE_API_BASE_URL
@@ -32,7 +35,9 @@ function ModelSummary({ modelName, features, epochs, testSize, metrics }) {
           <ListGroup.Item><strong>MAE:</strong> {metrics.mae.toFixed(4)}</ListGroup.Item>
           <ListGroup.Item><strong>R²:</strong> {metrics.r2.toFixed(4)} ({(metrics.r2 * 100).toFixed(2)}%)</ListGroup.Item>
         </ListGroup>
-        <Button className="mt-3" onClick={handleExport}>Export Summary</Button>
+        <Button className="mt-3" onClick={handleExport}>
+          <CIcon icon={cilDescription} className="me-2" /> Export Summary
+        </Button>
 
         <Button className="mt-3" variant="outline-primary" onClick={() => {
           const download = (filename) => {
@@ -44,7 +49,10 @@ function ModelSummary({ modelName, features, epochs, testSize, metrics }) {
             document.body.removeChild(link);
           };
           download(`${modelName}.zip`);
-        }}>Download Model Files</Button>
+        }}>
+          <CIcon icon={cilCloudDownload} className="me-2" /> Download Model Files
+        </Button>
+
       </Card.Body>
     </Card>
   );

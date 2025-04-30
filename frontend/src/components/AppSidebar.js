@@ -18,6 +18,7 @@ import {
   cilChatBubble,
   cilMemory,
   cilSpeedometer,
+  cilVector,
   cibGithub
 } from '@coreui/icons'
 import { CNavTitle } from '@coreui/react'
@@ -75,6 +76,13 @@ const AppSidebar = () => {
       name: 'Predictor',
       to: '/pueapps/predictor',
       icon: <CIcon icon={cilBarChart} customClassName="nav-icon" />,
+      disabled: !model,
+    },
+    {
+      component: 'CNavItem',
+      name: 'Simulator',
+      to: '/pueapps/simulator',
+      icon: <CIcon icon={cilVector} customClassName="nav-icon" />,
       disabled: !model,
     },
     {

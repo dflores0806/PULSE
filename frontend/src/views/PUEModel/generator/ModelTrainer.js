@@ -2,6 +2,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Card, Button, Alert, Spinner, Form } from 'react-bootstrap';
+import { cilBolt } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
+
 
 function ModelTrainer({ features, onTrainingComplete, modelName }) {
   const [loading, setLoading] = useState(false);
@@ -67,7 +70,9 @@ function ModelTrainer({ features, onTrainingComplete, modelName }) {
               {' '}Training...
             </>
           ) : (
-            'Train Model'
+            <>
+              <CIcon icon={cilBolt} className="me-2" /> Train model
+            </>
           )}
         </Button>
 

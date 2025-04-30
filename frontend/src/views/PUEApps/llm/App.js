@@ -3,6 +3,8 @@ import {
   CCard, CForm, CFormInput, CFormSelect, CButton,
   CAlert, CSpinner, CListGroup, CListGroupItem, CRow, CCol
 } from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import { cilSend, cilMediaStop } from '@coreui/icons'
 
 import { Container, Row } from 'react-bootstrap'
 
@@ -104,13 +106,12 @@ const LLMAssistant = () => {
   return (
     <Container className="mb-4">
       <Row>
-        <CCard className="mb-4 border-info">
-          <p>
-            This LLM assistant (Ollama) allows you to interact with an AI model trained on your uploaded dataset.
-            You can ask questions in natural language about PUE optimization, temperature trends, correlated parameters, outliers, and more.
-            Select your preferred inference engine and type your question — the assistant will reply with insights based on your real data.
-          </p>
-        </CCard>
+        <CAlert color="info">
+          This LLM assistant (Ollama) allows you to interact with an AI model trained on your uploaded dataset.
+          You can ask questions in natural language about PUE optimization, temperature trends, correlated parameters, outliers, and more.
+          Select your preferred inference engine and type your question — the assistant will reply with insights based on your real data.
+        </CAlert>
+
         <CForm onSubmit={handleSubmit}>
           <CFormSelect
             label="LLM Engine"
@@ -135,11 +136,16 @@ const LLMAssistant = () => {
           <CRow className="align-items-center mb-3">
             <CCol>
               <CButton type="submit" color="primary" disabled={loading}>
-                {loading ? <CSpinner size="sm" /> : 'Ask'}
+                {loading ? <CSpinner size="sm" /> : (
+                  <>
+                    <CIcon icon={cilSend} className="me-2" /> Ask
+                  </>
+                )}
               </CButton>
+
               {loading && (
                 <CButton type="button" color="danger" className="ms-3" onClick={stopGeneration}>
-                  Stop
+                  <CIcon icon={cilMediaStop} className="me-2" /> Stop
                 </CButton>
               )}
             </CCol>
@@ -168,7 +174,7 @@ const LLMAssistant = () => {
         </CListGroup>
 
       </Row>
-    </Container>
+    </Container >
   )
 }
 

@@ -1,6 +1,9 @@
 
 import React, { useState } from 'react';
 import { Card, Form, Button, Alert } from 'react-bootstrap';
+import { cilMediaPlay } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
+
 
 function ModelSetup({ onModelNamed }) {
   const [name, setName] = useState('');
@@ -29,7 +32,10 @@ function ModelSetup({ onModelNamed }) {
             onChange={(e) => setName(e.target.value)}
           />
         </Form.Group>
-        <Button className="mt-3" onClick={handleStart}>Start</Button>
+        <Button className="mt-3" onClick={handleStart}>
+          <CIcon icon={cilMediaPlay} className="me-2" /> Start
+        </Button>
+
         {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
       </Card.Body>
     </Card>

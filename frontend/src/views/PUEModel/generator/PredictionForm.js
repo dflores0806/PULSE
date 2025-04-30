@@ -4,6 +4,9 @@ import axios from 'axios';
 import { Card, Form, Button, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { Bar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
+import { cilInput, cilChartLine } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
+
 
 Chart.register(...registerables);
 
@@ -122,16 +125,22 @@ function PredictionForm({ features, modelName, onPredictionSuccess, onPrediction
         </Form>
 
         <div className="d-flex gap-2 mt-3">
-          <Button type="button" variant="secondary" onClick={(e) => handleFillExample(e)}>Fill Example</Button>
+          <Button type="button" variant="secondary" onClick={(e) => handleFillExample(e)}>
+            <CIcon icon={cilInput} className="me-2" /> Fill Example
+          </Button>
+
           <Button onClick={handleSubmit} disabled={loading}>
             {loading ? (
               <>
                 <Spinner as="span" animation="border" size="sm" /> Predicting...
               </>
             ) : (
-              'Predict'
+              <>
+                <CIcon icon={cilChartLine} className="me-2" /> Predict
+              </>
             )}
           </Button>
+
         </div>
 
         {result !== null && (

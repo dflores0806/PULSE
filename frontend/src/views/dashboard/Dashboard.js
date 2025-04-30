@@ -10,6 +10,10 @@ import { CWidgetStatsC } from '@coreui/react'
 import { cilLibrary, cilCheckCircle, cilChatBubble } from '@coreui/icons'
 import axios from 'axios'
 
+import ChartDataLabels from 'chartjs-plugin-datalabels'
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ChartDataLabels)
+
+
 import { useModel } from '../../context/ModelContext'
 
 import { Bar, Line } from 'react-chartjs-2'
@@ -67,18 +71,33 @@ const Dashboard = () => {
                                         datasets: [{
                                             label: 'R²',
                                             data: stats.accuracy_by_model.map(m => m.r2),
-                                            backgroundColor: '#4e73df'
+                                            backgroundColor: '#4e73df',
                                         }]
                                     }}
                                     options={{
                                         responsive: true,
                                         plugins: {
                                             legend: { display: false },
-                                            title: { display: true, text: 'Model R² Scores' }
+                                            title: {
+                                                display: true,
+                                                text: 'Model R² Scores'
+                                            },
+                                            datalabels: {
+                                                anchor: 'middle',
+                                                align: 'right',
+                                                color: '#fff',
+                                                formatter: value => value.toFixed(2)
+                                            }
                                         },
-                                        scales: { y: { beginAtZero: true, max: 1 } }
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                max: 1
+                                            }
+                                        }
                                     }}
                                 />
+
                             </CCardBody>
                         </CCard>
                     )}
