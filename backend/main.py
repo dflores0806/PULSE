@@ -218,7 +218,7 @@ def predict_pue(
 
         simulations.append({
             "id": next_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "inputs": input_data['values'],
             "pue": prediction
         })
@@ -643,6 +643,7 @@ class AskRequest(BaseModel):
     query: str
     model: str = "phi"
     stream: bool = False
+    model_name: str
 
 # Main endpoint
 @app.post("/pue/llm/ask", tags=["PUELLM"])
@@ -655,6 +656,7 @@ async def ask_question(body: AskRequest, stream: bool = True):
     query = body.query
     model = body.model
     stream = body.stream
+    model_name = body.model_name
 
     try:
         lang = detect(query)
@@ -737,7 +739,7 @@ Please answer the following question:
             yield json.dumps({"response": f"[Error]: {str(e)}"}) + "\n"
         finally:
             # Register the interaction
-            log_llm_interaction_to_summary(query, full_response, model, active_model_name)
+            log_llm_interaction_to_summary(query, full_response, model, model_name)
 
 
     if not stream:
@@ -752,7 +754,7 @@ Please answer the following question:
         full_response = ''.join(chunks)
     
         # Register the interaction
-        log_llm_interaction(query, full_response, model, f"{active_model_name}.csv")
+        log_llm_interaction_to_summary(query, full_response, model, model_name)
         
         return JSONResponse(content={"response": ''.join(chunks)})
 
@@ -816,6 +818,102 @@ def get_llm_history():
         except Exception:
             return []
     return []
+
+# History
+@app.get("/pue/his/{model_name}", tags=["PUEHistory"])
+def get_model_history(model_name: str):
+    summary_path = SUMMARY_FOLDER / f"{model_name}.json"
+
+    if not summary_path.exists():
+        raise HTTPException(status_code=404, detail="Model summary not found")
+
+    with open(summary_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    simulations = data.get("simulations", [])
+    llm_questions = data.get("llm_questions", []) or data.get("llm_history", [])
+
+    return {
+        "simulations": simulations,
+        "llm_questions": llm_questions,
+    }
+
+@app.delete("/pue/his/clear_llm/{model_name}", tags=["PUEHistory"])
+def clear_llm_history(model_name: str):
+    summary_path = Path("summaries") / f"{model_name}.json"
+
+    if not summary_path.exists():
+        raise HTTPException(status_code=404, detail="Model summary not found.")
+
+    with open(summary_path, "r", encoding="utf-8") as f:
+        summary = json.load(f)
+
+    if "llm_history" in summary:
+        summary["llm_history"] = []
+
+    if "llm_questions" in summary:
+        summary["llm_questions"] = []
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    return {"message": f"LLM history cleared for model '{model_name}'."}
+
+@app.delete("/pue/his/clear_simulations/{model_name}", tags=["PUEHistory"])
+def clear_simulations_history(model_name: str):
+    summary_path = Path("summaries") / f"{model_name}.json"
+
+    if not summary_path.exists():
+        raise HTTPException(status_code=404, detail="Model summary not found.")
+
+    with open(summary_path, "r", encoding="utf-8") as f:
+        summary = json.load(f)
+
+    if "simulations" in summary:
+        summary["simulations"] = []
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    return {"message": f"Simulations cleared for model '{model_name}'."}
+
+@app.delete("/pue/his/delete_item", tags=["PUEHistory"])
+def delete_history_item(
+    payload: dict = Body(...)
+):
+    model = payload.get("model")
+    action_type = payload.get("type")
+    timestamp = payload.get("timestamp")
+
+    if not all([model, action_type, timestamp]):
+        raise HTTPException(status_code=400, detail="Missing required fields.")
+
+    summary_path = Path("summaries") / f"{model}.json"
+    if not summary_path.exists():
+        raise HTTPException(status_code=404, detail="Model summary not found.")
+
+    with open(summary_path, "r", encoding="utf-8") as f:
+        summary = json.load(f)
+
+    key_map = {
+        "Simulation": "simulations",
+        "LLM": "llm_history" if "llm_history" in summary else "llm_questions"
+    }
+
+    key = key_map.get(action_type)
+    if key not in summary or not isinstance(summary[key], list):
+        raise HTTPException(status_code=404, detail=f"No {action_type} entries found.")
+
+    original_len = len(summary[key])
+    summary[key] = [entry for entry in summary[key] if entry.get("timestamp") != timestamp]
+
+    if len(summary[key]) == original_len:
+        raise HTTPException(status_code=404, detail="Item not found.")
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    return {"message": f"{action_type} item deleted from model '{model}'."}
 
 # SETTINGS
 @app.post("/pue/set/default_model", tags=["PUESettings"])
@@ -958,6 +1056,9 @@ def purge_orphan_files():
                 if file.is_file():
                     file.unlink()
                     deleted_files.append(str(file))
+                elif file.is_dir() and not any(file.iterdir()):
+                    deleted_files.append(str(file))
+                    file.rmdir()
             except Exception as e:
                 errors.append(f"Error deleting {file}: {str(e)}")
 

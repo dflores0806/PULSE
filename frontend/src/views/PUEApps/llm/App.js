@@ -1,16 +1,34 @@
 import React, { useState, useRef } from 'react'
 import {
-  CCard, CForm, CFormInput, CFormSelect, CButton,
-  CAlert, CSpinner, CListGroup, CListGroupItem, CRow, CCol, CPagination, CPaginationItem
+  CCard,
+  CForm,
+  CFormInput,
+  CFormSelect,
+  CButton,
+  CAlert,
+  CSpinner,
+  CListGroup,
+  CListGroupItem,
+  CRow,
+  CCol,
+  CPagination,
+  CPaginationItem,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilSend, cilMediaStop } from '@coreui/icons'
 import { Container, Row } from 'react-bootstrap'
 import axios from 'axios'
+import { useModel } from '../../../context/ModelContext'
 
 import { useEffect } from 'react'
-import { CTable, CTableBody, CTableDataCell, CTableHead, CTableHeaderCell, CTableRow } from '@coreui/react'
-
+import {
+  CTable,
+  CTableBody,
+  CTableDataCell,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
+} from '@coreui/react'
 
 const LLMAssistant = () => {
   const [question, setQuestion] = useState('')
@@ -30,8 +48,7 @@ const LLMAssistant = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-
-
+  const active_model = useModel()
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL
 
@@ -45,7 +62,7 @@ const LLMAssistant = () => {
     '¿Cuáles son los valores atípicos en la temperatura ambiente?',
     '¿Qué tendencia diaria presenta el consumo energético?',
     '¿Cómo se comporta la humedad 2 durante los últimos días?',
-    '¿Qué variable tiene mayor correlación negativa con el PUE?'
+    '¿Qué variable tiene mayor correlación negativa con el PUE?',
   ]
 
   const stopGeneration = () => {
@@ -70,10 +87,11 @@ const LLMAssistant = () => {
         body: JSON.stringify({
           query: question,
           model: engine,
-          stream: true
+          stream: true,
+          model_name: active_model,
         }),
         headers: { 'Content-Type': 'application/json' },
-        signal: controllerRef.current.signal
+        signal: controllerRef.current.signal,
       })
 
       if (!res.ok) throw new Error('Request failed')
@@ -100,7 +118,6 @@ const LLMAssistant = () => {
           }
         }
       }
-
     } catch (err) {
       if (err.name !== 'AbortError') {
         setError('Failed to receive response from LLM.')
@@ -119,24 +136,22 @@ const LLMAssistant = () => {
   }
 
   const filteredHistory = selectedHistory
-    .filter(h => !historyModel || h.dataset?.startsWith(historyModel))
+    .filter((h) => !historyModel || h.dataset?.startsWith(historyModel))
     .slice()
     .reverse()
 
   const pageCount = Math.ceil(selectedHistory.length / itemsPerPage)
   const paginatedData = selectedHistory.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   )
 
-
-
   useEffect(() => {
-    axios.get(`${API_BASE}/pue/exp/models`)
-      .then(res => setModelsAvailable(res.data.models || []))
+    axios
+      .get(`${API_BASE}/pue/exp/models`)
+      .then((res) => setModelsAvailable(res.data.models || []))
       .catch(() => setModelsAvailable([]))
   }, [])
-
 
   useEffect(() => {
     if (!historyModel) {
@@ -144,8 +159,9 @@ const LLMAssistant = () => {
       return
     }
 
-    axios.get(`${API_BASE}/pue/exp/summary/${historyModel}`)
-      .then(res => {
+    axios
+      .get(`${API_BASE}/pue/exp/summary/${historyModel}`)
+      .then((res) => {
         const history = res.data?.llm_history || []
         setSelectedHistory(history.reverse())
         setCurrentPage(1) // reiniciar paginación
@@ -153,16 +169,15 @@ const LLMAssistant = () => {
       .catch(() => setSelectedHistory([]))
   }, [historyModel])
 
-
-
-
   return (
     <Container className="mb-4">
       <Row>
         <CAlert color="info">
-          This LLM assistant (Ollama) allows you to interact with an AI model trained on your uploaded dataset.
-          You can ask questions in natural language about PUE optimization, temperature trends, correlated parameters, outliers, and more.
-          Select your preferred inference engine and type your question — the assistant will reply with insights based on your real data.
+          This LLM assistant (Ollama) allows you to interact with an AI model trained on your
+          uploaded dataset. You can ask questions in natural language about PUE optimization,
+          temperature trends, correlated parameters, outliers, and more. Select your preferred
+          inference engine and type your question — the assistant will reply with insights based on
+          your real data.
         </CAlert>
 
         <CForm onSubmit={handleSubmit}>
@@ -189,7 +204,9 @@ const LLMAssistant = () => {
           <CRow className="align-items-center mb-3">
             <CCol>
               <CButton type="submit" color="primary" disabled={loading}>
-                {loading ? <CSpinner size="sm" /> : (
+                {loading ? (
+                  <CSpinner size="sm" />
+                ) : (
                   <>
                     <CIcon icon={cilSend} className="me-2" /> Ask
                   </>
@@ -202,20 +219,28 @@ const LLMAssistant = () => {
                 </CButton>
               )}
             </CCol>
-            <CCol className="text-end text-muted">
-              {statusMessage}
-            </CCol>
+            <CCol className="text-end text-muted">{statusMessage}</CCol>
           </CRow>
         </CForm>
 
         {response && (
           <CAlert color="success" className="mt-4" style={{ whiteSpace: 'pre-wrap' }}>
-            <strong>Response:</strong><br />{response}
+            <strong>Response:</strong>
+            <br />
+            {response}
           </CAlert>
         )}
 
-        {error && <CAlert color="danger" className="mt-4">{error}</CAlert>}
-        {updateMessage && <CAlert color="info" className="mt-3">{updateMessage}</CAlert>}
+        {error && (
+          <CAlert color="danger" className="mt-4">
+            {error}
+          </CAlert>
+        )}
+        {updateMessage && (
+          <CAlert color="info" className="mt-3">
+            {updateMessage}
+          </CAlert>
+        )}
 
         <h6 className="mt-5 mb-2">📌 Example questions</h6>
         <CListGroup>
@@ -236,7 +261,9 @@ const LLMAssistant = () => {
         >
           <option value="">-- All models --</option>
           {modelsAvailable.map((m, idx) => (
-            <option key={idx} value={m}>{m}</option>
+            <option key={idx} value={m}>
+              {m}
+            </option>
           ))}
         </CFormSelect>
 
@@ -298,11 +325,8 @@ const LLMAssistant = () => {
             </CPagination>
           </>
         )}
-
-
-
       </Row>
-    </Container >
+    </Container>
   )
 }
 

@@ -129,34 +129,73 @@ npm run dev
 
 ## 📡 API endpoints summary
 
-| Method | Endpoint                          | Description                |
-|--------|-----------------------------------|----------------------------|
-| POST   | `/pue/gen/upload_data`            | Upload Data                |
-| POST   | `/pue/gen/load_sample`            | Load Sample                |
-| POST   | `/pue/gen/suggest_features`       | Suggest Features           |
-| POST   | `/pue/gen/train_model`            | Train Model                |
-| POST   | `/pue/gen/predict`                | Predict PUE                |
-| POST   | `/pue/gen/example_input`          | Get Example Input          |
-| POST   | `/pue/gen/automl_train`           | AutoML Train Streaming     |
-| POST   | `/pue/gen/save_automl_model`      | Save AutoML Model          |
-| POST   | `/pue/gen/simulation/delete`      | Simulation Delete          |
-| POST   | `/pue/exp/simulations/clear`             | Simulations Clear         |
-| GET    | `/pue/exp/models`                        | List Models               |
-| GET    | `/pue/exp/summary/{model_name}`          | Get Model Summary         |
-| DELETE | `/pue/exp/delete/{model_name}`           | Delete Model              |
-| GET    | `/pue/exp/download/{model_name}.zip`     | Download Model Zip        |
-| GET    | `/pue/datasets/list`                     | List Datasets             |
-| GET    | `/pue/datasets/load/{dataset_name}`      | Load Dataset              |
-| POST   | `/pue/datasets/filter`                   | Filter Dataset            |
-| GET    | `/pue/datasets/plots/{dataset_name}`     | Generate Plots            |
-| POST   | `/pue/llm/ask`     | Ask Question    |
-| GET    | `/pue/set/default_model`      | Get Default Model       |
-| POST   | `/pue/set/default_model`      | Set Default Model       |
-| DELETE | `/pue/set/delete_all`         | Delete All Models       |
-| GET    | `/pue/set/download_all`       | Download All Models     |
-| DELETE | `/pue/set/purge`              | Purge Orphan Files      |
-| GET    | `/pue/stats`           | Get Statistics        |
-| GET    | `/pue/stats/dashboard` | Get Dashboard Stats   |
+### 🧩 Backend endpoints
+
+#### PUEModelGenerator
+
+| Method | Endpoint                             | Description             |
+|--------|--------------------------------------|-------------------------|
+| POST   | `/pue/gen/upload_data`               | Upload Data             |
+| POST   | `/pue/gen/load_sample`               | Load Sample             |
+| POST   | `/pue/gen/suggest_features`          | Suggest Features        |
+| POST   | `/pue/gen/train_model`               | Train Model             |
+| POST   | `/pue/gen/predict`                   | Predict PUE             |
+| GET    | `/pue/gen/example_input/{model}`     | Get Example Input       |
+| POST   | `/pue/gen/automl_train`              | AutoML Train Streaming  |
+| POST   | `/pue/gen/save_automl_model`         | Save AutoML Model       |
+| DELETE | `/pue/gen/simulation/delete/{model}/{timestamp}` | Simulation Delete |
+
+#### PUEModelExplorer
+
+| Method | Endpoint                                      | Description             |
+|--------|-----------------------------------------------|-------------------------|
+| POST   | `/pue/exp/simulations/clear`                  | Simulations Clear       |
+| GET    | `/pue/exp/models`                             | List Models             |
+| GET    | `/pue/exp/summary/{model_name}`               | Get Model Summary       |
+| DELETE | `/pue/exp/delete/{model_name}`                | Delete Model            |
+| GET    | `/pue/exp/download/{model_name}.zip`          | Download Model Zip      |
+
+#### PUEDatasets
+
+| Method | Endpoint                                      | Description             |
+|--------|-----------------------------------------------|-------------------------|
+| GET    | `/pue/datasets/list`                          | List Datasets           |
+| GET    | `/pue/datasets/load/{dataset_name}`           | Load Dataset            |
+| POST   | `/pue/datasets/filter`                        | Filter Dataset          |
+| GET    | `/pue/datasets/plots/{dataset_name}`          | Generate Plots          |
+
+#### PUELLM
+
+| Method | Endpoint              | Description             |
+|--------|-----------------------|-------------------------|
+| POST   | `/pue/llm/ask`        | Ask Question            |
+| GET    | `/pue/llm/history`    | Get LLM History         |
+
+#### PUEHistory
+
+| Method | Endpoint                                     | Description                |
+|--------|----------------------------------------------|----------------------------|
+| GET    | `/pue/his/{model_name}`                      | Get Model History          |
+| DELETE | `/pue/his/clear_llm/{model_name}`            | Clear LLM History          |
+| DELETE | `/pue/his/clear_simulations/{model_name}`    | Clear Simulations History  |
+| DELETE | `/pue/his/delete_item`                       | Delete History Item        |
+
+#### PUESettings
+
+| Method | Endpoint                    | Description             |
+|--------|-----------------------------|-------------------------|
+| GET    | `/pue/set/default_model`    | Get Default Model       |
+| POST   | `/pue/set/default_model`    | Set Default Model       |
+| DELETE | `/pue/set/delete_all`       | Delete All Models       |
+| GET    | `/pue/set/download_all`     | Download All Models     |
+| DELETE | `/pue/set/purge`            | Purge Orphan Files      |
+
+#### PUEStats
+
+| Method | Endpoint               | Description             |
+|--------|------------------------|-------------------------|
+| GET    | `/pue/stats`           | Get Statistics          |
+| GET    | `/pue/stats/dashboard` | Get Dashboard Stats     |
 
 ---
 
@@ -198,6 +237,12 @@ npm run dev
     - Save simulations with timestamp and inputs
     - View, re-run, delete or clear simulations
     - Visualize simulation history
+- #### 📚 History
+    - Chronological log of simulations and LLM queries per model
+    - View detailed input/output for each action
+    - Replicate actions on other compatible models
+    - Delete individual history items
+    - Compare results graphically across models
  - #### 💬 LLM assistant
     - Ask questions about input features, optimization, cooling
     - Context-aware answers based on current model
@@ -220,13 +265,13 @@ flowchart TD
     A[Start] --> B{User Interface}
 
     B --> C1[📁 PUE Models]
-    C1 --> D1[🧱 Model Generator]
+    C1 --> D1[🧱 Model generator]
     D1 --> D1a[📤 Upload or load CSV]
     D1a --> D1b[🧠 Select features]
     D1b --> D1c[🔁 Train model]
     D1c --> D1d[💾 Save model, scaler, summary]
 
-    C1 --> D2[🤖 AutoML Generator]
+    C1 --> D2[🤖 AutoML generator]
     D2 --> D2a[📤 Upload CSV]
     D2a --> D2b[⚙️ Auto analyze & train]
     D2b --> D1d
@@ -253,6 +298,11 @@ flowchart TD
     E3a --> E3b[🤖 Ask question]
     E3b --> E3c[📡 Stream response]
 
+    C2 --> E4[📚 History]
+    E4 --> E4a[📆 Chronological log of actions]
+    E4a --> E4b[👁️ View, replicate or delete]
+    E4b --> E4c[📊 Compare outputs across models]
+
     B --> C3[⚙️ Settings]
     C3 --> F1[✔️ Set default model]
     C3 --> F2[🧹 Purge files]
@@ -263,6 +313,7 @@ flowchart TD
     E1c --> G
     E2c --> G
     E3c --> G
+    E4c --> G
     F1 --> G
 
     G --> H[🔁 Repeat or exit]
@@ -320,6 +371,16 @@ sequenceDiagram
     LLM-->>Backend: Stream response
     Backend-->>Frontend: Return streamed data
     Frontend-->>User: Display answer in real-time
+
+    %% History Actions
+    User->>Frontend: Open history for selected model
+    Frontend->>Backend: GET /pue/his/{model}
+    Backend-->>Frontend: Return simulations & LLM queries
+    User->>Frontend: View, replicate, or delete entry
+    Frontend->>Backend: POST /pue/gen/predict or POST /pue/llm/ask (replication)
+    Frontend->>Backend: DELETE /pue/his/delete_item (deletion)
+    Backend-->>Frontend: Return updated history or results
+    Frontend-->>User: Update interface with new result
 
 ```
 

@@ -14,6 +14,7 @@ import PUEApps from './views/PUEApps/PUEApps'
 import PUEAppsSimulator from './views/PUEApps/simulator/ScenarioSimulator'
 import PUEAppsPredictor from './views/PUEApps/predictor/Predictor'
 import PUEAppsLLM from './views/PUEApps/llm/LLM'
+import PUEAppsHistory from './views/PUEApps/history/History'
 
 // Base
 const Accordion = React.lazy(() => import('./views/base/accordion/Accordion'))
@@ -73,6 +74,7 @@ const routes = [
   { path: '/PUEApps/predictor', name: 'Predictor', element: PUEAppsPredictor },
   { path: '/PUEApps/simulator', name: 'Simulator', element: PUEAppsSimulator },
   { path: '/PUEApps/llm', name: 'LLM', element: PUEAppsLLM },
+  { path: '/PUEApps/history', name: 'History', element: PUEAppsHistory },
 
   { path: '/', exact: true, name: 'Home' },
   { path: '/dashboard', name: 'Dashboard', element: Dashboard },

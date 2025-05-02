@@ -19,7 +19,8 @@ import {
   cilMemory,
   cilSpeedometer,
   cilVector,
-  cibGithub
+  cibGithub,
+  cilHistory
 } from '@coreui/icons'
 import { CNavTitle } from '@coreui/react'
 
@@ -90,6 +91,13 @@ const AppSidebar = () => {
       name: 'LLM',
       to: '/pueapps/llm',
       icon: <CIcon icon={cilChatBubble} customClassName="nav-icon" />,
+      disabled: !model,
+    },
+    {
+      component: 'CNavItem',
+      name: 'History',
+      to: '/pueapps/history',
+      icon: <CIcon icon={cilHistory} customClassName="nav-icon" />,
       disabled: !model,
     },
     {
