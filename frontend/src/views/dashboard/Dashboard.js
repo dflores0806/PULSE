@@ -84,7 +84,7 @@ const Dashboard = () => {
                                             },
                                             datalabels: {
                                                 anchor: 'middle',
-                                                align: 'right',
+                                                align: 'center',
                                                 color: '#fff',
                                                 formatter: value => value.toFixed(2)
                                             }

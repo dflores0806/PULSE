@@ -1,12 +1,16 @@
 import React, { useState, useRef } from 'react'
 import {
   CCard, CForm, CFormInput, CFormSelect, CButton,
-  CAlert, CSpinner, CListGroup, CListGroupItem, CRow, CCol
+  CAlert, CSpinner, CListGroup, CListGroupItem, CRow, CCol, CPagination, CPaginationItem
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilSend, cilMediaStop } from '@coreui/icons'
-
 import { Container, Row } from 'react-bootstrap'
+import axios from 'axios'
+
+import { useEffect } from 'react'
+import { CTable, CTableBody, CTableDataCell, CTableHead, CTableHeaderCell, CTableRow } from '@coreui/react'
+
 
 const LLMAssistant = () => {
   const [question, setQuestion] = useState('')
@@ -17,6 +21,17 @@ const LLMAssistant = () => {
   const [updateMessage, setUpdateMessage] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const controllerRef = useRef(null)
+
+  const [modelsAvailable, setModelsAvailable] = useState([])
+  const [historyModel, setHistoryModel] = useState('')
+  const [selectedHistory, setSelectedHistory] = useState([])
+
+  const [expandedRow, setExpandedRow] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
+
+
+
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL
 
@@ -103,6 +118,44 @@ const LLMAssistant = () => {
     setStatusMessage('')
   }
 
+  const filteredHistory = selectedHistory
+    .filter(h => !historyModel || h.dataset?.startsWith(historyModel))
+    .slice()
+    .reverse()
+
+  const pageCount = Math.ceil(selectedHistory.length / itemsPerPage)
+  const paginatedData = selectedHistory.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/pue/exp/models`)
+      .then(res => setModelsAvailable(res.data.models || []))
+      .catch(() => setModelsAvailable([]))
+  }, [])
+
+
+  useEffect(() => {
+    if (!historyModel) {
+      setSelectedHistory([])
+      return
+    }
+
+    axios.get(`${API_BASE}/pue/exp/summary/${historyModel}`)
+      .then(res => {
+        const history = res.data?.llm_history || []
+        setSelectedHistory(history.reverse())
+        setCurrentPage(1) // reiniciar paginación
+      })
+      .catch(() => setSelectedHistory([]))
+  }, [historyModel])
+
+
+
+
   return (
     <Container className="mb-4">
       <Row>
@@ -172,6 +225,81 @@ const LLMAssistant = () => {
             </CListGroupItem>
           ))}
         </CListGroup>
+
+        <h6 className="mt-5 mb-2">📚 Past Questions</h6>
+
+        <CFormSelect
+          className="mb-3"
+          label="Filter by model"
+          value={historyModel}
+          onChange={(e) => setHistoryModel(e.target.value)}
+        >
+          <option value="">-- All models --</option>
+          {modelsAvailable.map((m, idx) => (
+            <option key={idx} value={m}>{m}</option>
+          ))}
+        </CFormSelect>
+
+        {selectedHistory.length === 0 ? (
+          <p className="text-muted">No previous questions found.</p>
+        ) : (
+          <>
+            <div className="table-responsive">
+              <CTable striped hover>
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell>Date</CTableHeaderCell>
+                    <CTableHeaderCell>Query</CTableHeaderCell>
+                    <CTableHeaderCell>Engine</CTableHeaderCell>
+                    <CTableHeaderCell>Response</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {paginatedData.map((h, idx) => (
+                    <CTableRow key={idx}>
+                      <CTableDataCell>{new Date(h.timestamp).toLocaleString()}</CTableDataCell>
+                      <CTableDataCell>{h.query}</CTableDataCell>
+                      <CTableDataCell>{h.ollama_model}</CTableDataCell>
+                      <CTableDataCell
+                        className="text-primary"
+                        style={{ cursor: 'pointer', whiteSpace: 'pre-wrap' }}
+                        onClick={() => setExpandedRow(expandedRow === idx ? null : idx)}
+                      >
+                        {expandedRow === idx ? h.response : h.response.slice(0, 100) + '...'}
+                      </CTableDataCell>
+                    </CTableRow>
+                  ))}
+                </CTableBody>
+              </CTable>
+            </div>
+
+            <CPagination align="end" className="mt-3">
+              <CPaginationItem
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                «
+              </CPaginationItem>
+              {[...Array(pageCount)].map((_, i) => (
+                <CPaginationItem
+                  key={i}
+                  active={i + 1 === currentPage}
+                  onClick={() => setCurrentPage(i + 1)}
+                >
+                  {i + 1}
+                </CPaginationItem>
+              ))}
+              <CPaginationItem
+                disabled={currentPage === pageCount}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                »
+              </CPaginationItem>
+            </CPagination>
+          </>
+        )}
+
+
 
       </Row>
     </Container >

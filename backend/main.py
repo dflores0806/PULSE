@@ -28,7 +28,6 @@ import zipfile
 import requests
 from datetime import datetime
 from pathlib import Path
-from datetime import datetime
 from langdetect import detect
 from typing import List
 import json
@@ -715,6 +714,7 @@ Please answer the following question:
 """
 
     def generate():
+        full_response = "" 
         try:
             response = requests.post(
                 "http://localhost:11434/api/generate",
@@ -728,11 +728,17 @@ Please answer the following question:
                     try:
                         json_line = json.loads(line.decode("utf-8"))
                         if json_line.get("response"):
-                            yield json.dumps({"response": json_line["response"]}) + "\n"
+                            chunk = json_line["response"]
+                            full_response += chunk
+                            yield json.dumps({"response": chunk}) + "\n"
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
             yield json.dumps({"response": f"[Error]: {str(e)}"}) + "\n"
+        finally:
+            # Register the interaction
+            log_llm_interaction_to_summary(query, full_response, model, active_model_name)
+
 
     if not stream:
         chunks = []
@@ -743,9 +749,38 @@ Please answer the following question:
                     chunks.append(json_obj['response'])
             except Exception:
                 continue
+        full_response = ''.join(chunks)
+    
+        # Register the interaction
+        log_llm_interaction(query, full_response, model, f"{active_model_name}.csv")
+        
         return JSONResponse(content={"response": ''.join(chunks)})
 
     return StreamingResponse(generate(), media_type="application/json")
+
+def log_llm_interaction_to_summary(query: str, response: str, model: str, model_name: str):
+    summary_path = Path("summaries") / f"{model_name}.json"
+    if not summary_path.exists():
+        return
+
+    try:
+        with open(summary_path, "r", encoding="utf-8") as f:
+            summary = json.load(f)
+    except Exception:
+        summary = {}
+
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "query": query,
+        "response": response,
+        "ollama_model": model
+    }
+
+    summary.setdefault("llm_history", []).append(entry)
+
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
 
 # Statistics update
 def update_llm_stats():
@@ -771,6 +806,16 @@ def update_llm_stats():
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)
   
+@app.get("/pue/llm/history", tags=["PUELLM"])
+def get_llm_history():
+    history_path = Path(".config/llm_history.json")
+    if history_path.exists():
+        try:
+            with open(history_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
 
 # SETTINGS
 @app.post("/pue/set/default_model", tags=["PUESettings"])
