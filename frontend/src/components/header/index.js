@@ -1,3 +1,3 @@
-import AppHeaderDropdown from './AppHeaderDropdown'
+import Account from './Account'
 
-export { AppHeaderDropdown }
+export { Account }

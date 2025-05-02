@@ -28,7 +28,7 @@ import {
 } from '@coreui/icons'
 
 import { AppBreadcrumb } from './index'
-import { AppHeaderDropdown } from './header/index'
+import { Account } from './header/index'
 
 import { useModel } from '../context/ModelContext'
 
@@ -47,8 +47,9 @@ const AppHeader = () => {
 
   useEffect(() => {
     const loadDefaultModel = () => {
-      axios.get(`${API_BASE}/pue/set/default_model`)
-        .then(res => setDefaultModel(res.data.default_model || ''))
+      axios
+        .get(`${API_BASE}/pue/set/default_model`)
+        .then((res) => setDefaultModel(res.data.default_model || ''))
         .catch(() => setDefaultModel(''))
     }
 
@@ -61,13 +62,14 @@ const AppHeader = () => {
     })
 
     return () => {
-      window.removeEventListener('storage', () => { })
+      window.removeEventListener('storage', () => {})
     }
   }, [])
 
   useEffect(() => {
-    axios.get(`${API_BASE}/pue/set/default_model`)
-      .then(res => setDefaultModel(res.data.default_model || ''))
+    axios
+      .get(`${API_BASE}/pue/set/default_model`)
+      .then((res) => setDefaultModel(res.data.default_model || ''))
       .catch(() => setDefaultModel(''))
   }, [])
 
@@ -89,7 +91,9 @@ const AppHeader = () => {
         </CHeaderToggler>
         <CHeaderNav className="d-none d-md-flex">
           <CNavItem>
-            <CNavLink href="#">Selected model: {model || <a href="/settings#settings">set model</a>}</CNavLink>
+            <CNavLink href="#">
+              Selected model: {model || <a href="/settings#settings">set model</a>}
+            </CNavLink>
           </CNavItem>
         </CHeaderNav>
 
@@ -140,7 +144,7 @@ const AppHeader = () => {
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
-          {/*<AppHeaderDropdown />*/}
+          <Account />
         </CHeaderNav>
       </CContainer>
       <CContainer className="px-4" fluid>

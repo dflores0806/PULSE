@@ -64,6 +64,16 @@ os.makedirs(".config", exist_ok=True)
 if not os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "w") as f:
         json.dump({"default_model": None}, f)
+        
+# LOGIN
+USERNAME = os.getenv("LOGIN_USERNAME", "admin")
+PASSWORD = os.getenv("LOGIN_PASSWORD", "admin")
+
+@app.post("/auth/login")
+def login(username: str = Form(...), password: str = Form(...)):
+    if username == USERNAME and password == PASSWORD:
+        return JSONResponse(content={"success": True})
+    raise HTTPException(status_code=401, detail="Invalid credentials")
 
 # PREDICTIONS
 stored_data = {}
