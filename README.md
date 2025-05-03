@@ -131,11 +131,19 @@ cd frontend
 npm install
 ```
 
-#### Config:
+#### Config
 `.env`
 ```
 VITE_API_BASE_URL=http://localhost:8000
 ```
+
+#### Default login
+```
+Username: admin
+Password: admin
+```
+Change it in:
+ - `backend/.env`
 
 ### Run frontend
 
@@ -192,7 +200,6 @@ npm run dev
 | Method | Endpoint              | Description             |
 |--------|-----------------------|-------------------------|
 | POST   | `/pulse/llm/ask`        | Ask Question            |
-| GET    | `/pulse/llm/history`    | Get LLM History         |
 
 #### PUEHistory
 

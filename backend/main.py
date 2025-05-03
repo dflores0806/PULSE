@@ -37,12 +37,16 @@ import time
 import matplotlib.pyplot as plt
 import io
 import base64
+from dotenv import load_dotenv
 
-CONFIG_PATH = Path(".config/config.json")
-
+ENV_PATH = Path(".env")
+CONFIG_PATH = Path(".config")
 DATASETS_FOLDER = Path("datasets")
 MODEL_FOLDER = Path("models")
 SUMMARY_FOLDER = Path("summaries")
+
+CONFIG_FILE = Path("config.json")
+STATISTICS_FILE = Path("statistics.json")
 
 DATASETS_FOLDER.mkdir(parents=True, exist_ok=True)
 MODEL_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -65,15 +69,21 @@ def get_model(model_name):
     return loaded_models[model_name]
 
 # Create default .config if not exists
-os.makedirs(".config", exist_ok=True)
+os.makedirs(CONFIG_PATH, exist_ok=True)
 
 if not os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "w") as f:
         json.dump({"default_model": None}, f)
         
 # LOGIN
-USERNAME = os.getenv("LOGIN_USERNAME", "admin")
-PASSWORD = os.getenv("LOGIN_PASSWORD", "admin")
+if not ENV_PATH.exists():
+    with open(ENV_PATH, "w") as f:
+        f.write("LOGIN_USERNAME=admin\n")
+        f.write("LOGIN_PASSWORD=admin\n")
+
+load_dotenv()
+USERNAME = os.getenv("LOGIN_USERNAME","admin") # Default admin if LOGIN_USERNAME does not exists in .env
+PASSWORD = os.getenv("LOGIN_PASSWORD","admin") # Default admin if LOGIN_PASSWORD does not exists in .env
 
 @app.post("/auth/login", tags=["Login"])
 def login(username: str = Form(...), password: str = Form(...)):
@@ -257,8 +267,8 @@ def predict_pue(
 
 def update_prediction_stats():
     
-    stats_path = Path(".config", "statistics.json")
-    Path(".config").mkdir(parents=True, exist_ok=True)
+    stats_path = Path(CONFIG_PATH, STATISTICS_FILE)
+    Path(CONFIG_PATH).mkdir(parents=True, exist_ok=True)
 
     stats = {
         "predictions_per_month": {},
@@ -542,22 +552,22 @@ async def load_dataset(dataset_name: str):
     if not dataset_path.exists():
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    # Leer el dataset completo
+    # Read dataset
     df = pd.read_csv(dataset_path, sep=';')
 
-    # Determinar el modelo asociado (sin extensión)
+    # Find associated model
     model_name = dataset_name.rsplit('.', 1)[0]
     summary_path = Path("summaries") / f"{model_name}.json"
 
     if not summary_path.exists():
         raise HTTPException(status_code=404, detail="Model summary not found")
 
-    # Leer features desde el JSON
+    # Read features
     with open(summary_path, "r") as f:
         summary_data = json.load(f)
     features = summary_data.get("features", [])
 
-    # Filtrar solo las columnas que están en las features
+    # Filter contained features
     filtered_df = df[[col for col in features if col in df.columns]]
 
     sample = filtered_df.head(100).to_dict(orient="records")
@@ -571,7 +581,7 @@ async def load_dataset(dataset_name: str):
 	
 class FilterRequest(BaseModel):
     dataset_name: str
-    filters: List[dict]  # Cada filtro: {"column": "temp", "operator": ">", "value": 25}
+    filters: List[dict] 
 
 @app.post("/pulse/datasets/filter", tags=["PUEDatasets"])
 async def filter_dataset(request: FilterRequest):
@@ -610,22 +620,22 @@ async def generate_plots(dataset_name: str):
     if not dataset_path.exists():
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    # Leer el CSV
+    # Read dataset
     df = pd.read_csv(dataset_path, sep=';')
 
-    # Determinar el modelo asociado (mismo nombre sin extensión)
+    # Determine associated model
     model_name = dataset_name.rsplit('.', 1)[0]
     summary_path = Path("summaries") / f"{model_name}.json"
 
     if not summary_path.exists():
         raise HTTPException(status_code=404, detail="Model summary not found")
 
-    # Leer JSON y extraer las features
+    # Read json and extract features
     with open(summary_path, "r") as f:
         summary_data = json.load(f)
     features = summary_data.get("features", [])
 
-    # Seleccionar solo las variables numéricas que están en features
+    # Select numeric vars from the dataset
     numeric_df = df.select_dtypes(include=['number'])
     numeric_df = numeric_df[[col for col in features if col in numeric_df.columns]]
 
@@ -650,7 +660,6 @@ async def generate_plots(dataset_name: str):
     return {"histogram": histogram_base64}
 
 # LLM
-# Global cache
 df = None
 precomputed_correlation = ""
 descriptions = []
@@ -707,7 +716,6 @@ class AskRequest(BaseModel):
     stream: bool = False
     model_name: str
 
-# Main endpoint
 @app.post("/pulse/llm/ask", tags=["PUELLM"])
 async def ask_question(body: AskRequest, stream: bool = True):
     try:
@@ -848,8 +856,8 @@ def log_llm_interaction_to_summary(query: str, response: str, model: str, model_
 
 # Statistics update
 def update_llm_stats():
-    stats_path = Path(".config", "statistics.json")
-    Path(".config").mkdir(parents=True, exist_ok=True)
+    stats_path = Path(CONFIG_PATH, STATISTICS_FILE)
+    Path(CONFIG_PATH).mkdir(parents=True, exist_ok=True)
 
     stats = {
         "predictions_per_month": {},
@@ -869,19 +877,8 @@ def update_llm_stats():
 
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)
-  
-@app.get("/pulse/llm/history", tags=["PUELLM"])
-def get_llm_history():
-    history_path = Path(".config/llm_history.json")
-    if history_path.exists():
-        try:
-            with open(history_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
 
-# History
+# HISTORY
 @app.get("/pulse/history/{model_name}", tags=["PUEHistory"])
 def get_model_history(model_name: str):
     summary_path = SUMMARY_FOLDER / f"{model_name}.json"
@@ -980,15 +977,15 @@ def delete_history_item(
 # SETTINGS
 @app.post("/pulse/settings/default_model", tags=["PUESettings"])
 def set_default_model(model_name: str = Form(...)):
-    config_path = Path(".config", "config.json")
-    Path(".config").mkdir(parents=True, exist_ok=True)
+    config_path = Path(CONFIG_PATH, CONFIG_FILE)
+    Path(CONFIG_PATH).mkdir(parents=True, exist_ok=True)
     with open(config_path, "w") as f:
         json.dump({"default_model": model_name}, f)
     return {"message": f"Default model set to '{model_name}'"}
 
 @app.get("/pulse/settings/default_model", tags=["PUESettings"])
 def get_default_model():
-    config_path = Path(".config", "config.json")
+    config_path = Path(CONFIG_PATH, CONFIG_FILE)
     if not Path(config_path):
         return {"default_model": ""}
     with open(config_path, "r") as f:
@@ -1050,7 +1047,7 @@ def download_all_models():
 # STATS
 @app.get("/pulse/statistics", tags=["PUEStatistics"])
 def get_statistics():
-    stats_path = Path(".config", "statistics.json")
+    stats_path = Path(CONFIG_PATH, STATISTICS_FILE)
     if Path(stats_path):
         with open(stats_path, "r") as f:
             return json.load(f)
@@ -1059,7 +1056,7 @@ def get_statistics():
     
 @app.get("/pulse/statistics/dashboard", tags=["PUEStatistics"])
 def get_dashboard_statistics():
-    stats_path = Path(".config", "statistics.json")
+    stats_path = Path(CONFIG_PATH, STATISTICS_FILE)
 
     models = []
     r2_list = []
