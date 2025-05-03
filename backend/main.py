@@ -17,6 +17,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 from sentence_transformers import SentenceTransformer
+from threading import Lock
 
 # 📚 Utilities & system
 import os
@@ -36,7 +37,6 @@ import time
 import matplotlib.pyplot as plt
 import io
 import base64
-
 
 CONFIG_PATH = Path(".config/config.json")
 
@@ -58,6 +58,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def get_model(model_name):
+    if model_name not in loaded_models:
+        model_path = Path(MODEL_FOLDER, f'{model_name}.h5')
+        loaded_models[model_name] = tf.keras.models.load_model(model_path)
+    return loaded_models[model_name]
+
 # Create default .config if not exists
 os.makedirs(".config", exist_ok=True)
 
@@ -77,6 +83,8 @@ def login(username: str = Form(...), password: str = Form(...)):
 
 # PREDICTIONS
 stored_data = {}
+model_lock = Lock()
+loaded_models = {}
 
 class FeatureSelection(BaseModel):
     features: list[str]
@@ -157,12 +165,18 @@ def train_model(
     model.compile(optimizer='adam', loss='mse')
     history = model.fit(X_train, y_train, epochs=epochs, batch_size=16, verbose=0)
 
+    # Remove old version from cache if it exists
+    if model_name in loaded_models:
+        del loaded_models[model_name]
+
     model.save(Path(MODEL_FOLDER, f'{model_name}.h5'), include_optimizer=False)
     joblib.dump(scaler, Path(MODEL_FOLDER, f'{model_name}_scaler.gz'))
     stored_data[model_name] = features
 
 
-    y_pred = model.predict(X_test).flatten()
+    with model_lock:
+        model = get_model(model_name)
+        y_pred = model.predict(X_test).flatten()
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     loss = history.history['loss'][-1]
@@ -216,7 +230,9 @@ def predict_pue(
 
     values = [input_data['values'][feat] for feat in features]
     X = scaler.transform([values])
-    prediction = model.predict(X)[0][0]
+    with model_lock:
+        model = get_model(model_name)
+        prediction = model.predict(X)[0][0]
     prediction = round(float(prediction), 4)
 
     update_prediction_stats()
@@ -327,7 +343,9 @@ async def automl_train_streaming(
                 model.compile(optimizer='adam', loss='mse')
                 history = model.fit(X_train, y_train, epochs=epochs, batch_size=16, verbose=0)
 
-                y_pred = model.predict(X_test).flatten()
+                with model_lock:
+                    model = get_model(model_name)
+                    y_pred = model.predict(X_test).flatten()
                 loss = history.history['loss'][-1]
                 mae = mean_absolute_error(y_test, y_pred)
                 r2 = r2_score(y_test, y_pred)
@@ -391,6 +409,10 @@ async def save_automl_model(payload: SaveAutoMLRequest):
 
     os.makedirs(MODEL_FOLDER, exist_ok=True)
     os.makedirs(SUMMARY_FOLDER, exist_ok=True)
+    
+    # Remove old version from cache if it exists
+    if final_name in loaded_models:
+        del loaded_models[final_name]
 
     shutil.copy(model_path, model_dest)
     shutil.copy(scaler_path, scaler_dest)
