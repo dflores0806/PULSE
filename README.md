@@ -12,16 +12,17 @@
 ```
 pulse/
 ├── backend/
-│   ├── main.py
 │   ├── .config/
 │   │   ├── config.json
 │   │   └── statistics.json
+|   |── .env
 │   ├── datasets/
 │   ├── models/
 │   ├── summaries/
+│   ├── main.py
 └── frontend/
     ├── public/
-    │   └── config.json (.env also supported)
+    │   └── config.json
     ├── src/
     │   ├── views/
     │   ├── components/
