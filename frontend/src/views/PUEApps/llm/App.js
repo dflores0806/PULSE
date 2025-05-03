@@ -82,7 +82,7 @@ const LLMAssistant = () => {
     controllerRef.current = new AbortController()
 
     try {
-      const res = await fetch(`${API_BASE}/pue/llm/ask`, {
+      const res = await fetch(`${API_BASE}/pulse/llm/ask`, {
         method: 'POST',
         body: JSON.stringify({
           query: question,
@@ -148,7 +148,7 @@ const LLMAssistant = () => {
 
   useEffect(() => {
     axios
-      .get(`${API_BASE}/pue/exp/models`)
+      .get(`${API_BASE}/pulse/explorer/models`)
       .then((res) => setModelsAvailable(res.data.models || []))
       .catch(() => setModelsAvailable([]))
   }, [])
@@ -160,7 +160,7 @@ const LLMAssistant = () => {
     }
 
     axios
-      .get(`${API_BASE}/pue/exp/summary/${historyModel}`)
+      .get(`${API_BASE}/pulse/explorer/summary/${historyModel}`)
       .then((res) => {
         const history = res.data?.llm_history || []
         setSelectedHistory(history.reverse())

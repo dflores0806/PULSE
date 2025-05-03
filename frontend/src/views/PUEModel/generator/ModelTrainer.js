@@ -33,7 +33,7 @@ function ModelTrainer({ features, onTrainingComplete, modelName }) {
       formData.append('epochs', epochs.toString());
       formData.append('test_size', testSize.toString());
 
-      const res = await axios.post(`${API_BASE}/pue/gen/train_model`, formData);
+      const res = await axios.post(`${API_BASE}/pulse/generator/train_model`, formData);
       const { loss, mae, r2 } = res.data;
       const log = `Training complete.\nLoss: ${loss.toFixed(4)}\nMAE: ${mae.toFixed(4)}\nR²: ${r2.toFixed(4)}`;
       setResultLog(log);

@@ -13,7 +13,6 @@ const ScenarioForm = ({ features, onSimulate, onReset, onFill, restoredInputs })
 
   useEffect(() => {
     if (restoredInputs) {
-      console.log('Restoring inputs:', restoredInputs)
       setFormData(restoredInputs)
     }
   }, [restoredInputs])

@@ -23,7 +23,7 @@ function FeatureSelector({ onFeatureSelect, modelName }) {
     formData.append('model_name', modelName)
 
     axios
-      .post(`${API_BASE}/pue/gen/suggest_features`, formData)
+      .post(`${API_BASE}/pulse/generator/suggest_features`, formData)
       .then((res) => {
         setSuggested(res.data.suggested_features || [])
         setCorrelations(res.data.correlations || {})

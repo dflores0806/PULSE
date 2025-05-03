@@ -48,7 +48,7 @@ const AppHeader = () => {
   useEffect(() => {
     const loadDefaultModel = () => {
       axios
-        .get(`${API_BASE}/pue/set/default_model`)
+        .get(`${API_BASE}/pulse/settings/default_model`)
         .then((res) => setDefaultModel(res.data.default_model || ''))
         .catch(() => setDefaultModel(''))
     }
@@ -68,7 +68,7 @@ const AppHeader = () => {
 
   useEffect(() => {
     axios
-      .get(`${API_BASE}/pue/set/default_model`)
+      .get(`${API_BASE}/pulse/settings/default_model`)
       .then((res) => setDefaultModel(res.data.default_model || ''))
       .catch(() => setDefaultModel(''))
   }, [])

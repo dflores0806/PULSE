@@ -38,11 +38,11 @@ const AutoMLWrapper = () => {
     setLoading(true)
     setError('')
     try {
-      await axios.post(`${API_BASE}/pue/gen/upload_data`, formData)
+      await axios.post(`${API_BASE}/pulse/generator/upload_data`, formData)
 
       const suggestForm = new FormData()
       suggestForm.append('model_name', modelName)
-      const res = await axios.post(`${API_BASE}/pue/gen/suggest_features`, suggestForm)
+      const res = await axios.post(`${API_BASE}/pulse/generator/suggest_features`, suggestForm)
 
       setSuggestedFeatures(res.data.suggested_features || [])
       setUploaded(true)

@@ -59,12 +59,12 @@ const History = () => {
 
   useEffect(() => {
     const fetchModels = async () => {
-      const modelsRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/exp/models`)
+      const modelsRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/explorer/models`)
       const modelsData = await modelsRes.json()
       const modelList = modelsData.models || modelsData
       setModels(modelList)
 
-      const defaultRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/set/default_model`)
+      const defaultRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/settings/default_model`)
       const defaultData = await defaultRes.json()
       if (defaultData.default_model && modelList.includes(defaultData.default_model)) {
         setSelectedModel(defaultData.default_model)
@@ -78,7 +78,7 @@ const History = () => {
 
   useEffect(() => {
     if (selectedModel) {
-      fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/his/${selectedModel}`)
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/history/${selectedModel}`)
         .then((res) => res.json())
         .then((data) => {
           const merged = [
@@ -120,7 +120,7 @@ const History = () => {
     )
     if (!confirmed) return
 
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/his/delete_item`, {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/history/delete_item`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -133,7 +133,7 @@ const History = () => {
     if (res.ok) {
       // Refresh history after deletion
       const data = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/pue/his/${selectedModel}`,
+        `${import.meta.env.VITE_API_BASE_URL}/pulse/history/${selectedModel}`,
       ).then((r) => r.json())
       const merged = [
         ...(data.simulations || []).map((s, i) => ({ ...s, type: 'Simulation', id: `sim_${i}` })),
@@ -151,13 +151,13 @@ const History = () => {
   }
 
   const clearSimulations = async () => {
-    await fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/his/clear_simulations/${selectedModel}`, {
+    await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/history/clear_simulations/${selectedModel}`, {
       method: 'DELETE',
     })
     //setConfirmClearSimModal(false)
     // Refresh
     const newData = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/pue/his/${selectedModel}`,
+      `${import.meta.env.VITE_API_BASE_URL}/pulse/history/${selectedModel}`,
     ).then((res) => res.json())
     const merged = [
       ...(newData.simulations || []).map((s, i) => ({ ...s, type: 'Simulation', id: `sim_${i}` })),
@@ -172,13 +172,13 @@ const History = () => {
   }
 
   const clearLLM = async () => {
-    await fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/his/clear_llm/${selectedModel}`, {
+    await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/history/clear_llm/${selectedModel}`, {
       method: 'DELETE',
     })
     //setConfirmClearLLMModal(false)
     // Refresh
     const newData = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/pue/his/${selectedModel}`,
+      `${import.meta.env.VITE_API_BASE_URL}/pulse/history/${selectedModel}`,
     ).then((res) => res.json())
     const merged = [
       ...(newData.simulations || []).map((s, i) => ({ ...s, type: 'Simulation', id: `sim_${i}` })),
@@ -208,10 +208,10 @@ const History = () => {
     setReplicateTarget(targetModel)
     if (modalContent?.type === 'Simulation') {
       const res1 = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/pue/exp/summary/${selectedModel}`,
+        `${import.meta.env.VITE_API_BASE_URL}/pulse/explorer/summary/${selectedModel}`,
       )
       const res2 = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/pue/exp/summary/${targetModel}`,
+        `${import.meta.env.VITE_API_BASE_URL}/pulse/explorer/summary/${targetModel}`,
       )
       const json1 = await res1.json()
       const json2 = await res2.json()
@@ -233,7 +233,7 @@ const History = () => {
       payload.append('model_name', replicateTarget)
       payload.append('save_simulation', true)
 
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/gen/predict`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/generator/predict`, {
         method: 'POST',
         body: payload,
       })
@@ -243,7 +243,7 @@ const History = () => {
     } else if (modalContent.type === 'LLM') {
       const query = modalContent.query || modalContent.question
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pue/llm/ask`, {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/llm/ask`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -75,7 +75,7 @@ if not os.path.exists(CONFIG_PATH):
 USERNAME = os.getenv("LOGIN_USERNAME", "admin")
 PASSWORD = os.getenv("LOGIN_PASSWORD", "admin")
 
-@app.post("/auth/login")
+@app.post("/auth/login", tags=["Login"])
 def login(username: str = Form(...), password: str = Form(...)):
     if username == USERNAME and password == PASSWORD:
         return JSONResponse(content={"success": True})
@@ -94,7 +94,7 @@ class FeatureSelection(BaseModel):
 class PredictionInput(BaseModel):
     values: dict
 
-@app.post("/pue/gen/upload_data", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/upload_data", tags=["PUEModelGenerator"])
 async def upload_data(model_name: str = Form(...), file: UploadFile = File(...)):
     file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
     with open(file_location, "wb") as f:
@@ -105,7 +105,7 @@ async def upload_data(model_name: str = Form(...), file: UploadFile = File(...))
         
     return {"message": "File uploaded successfully", "columns": df.columns.tolist()}
 
-@app.post("/pue/gen/load_sample", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/load_sample", tags=["PUEModelGenerator"])
 def load_sample(model_name: str = Form(...)):
     sample_path = os.path.abspath(Path(DATASETS_FOLDER, "sample.csv"))
     dest_path = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
@@ -119,7 +119,7 @@ def load_sample(model_name: str = Form(...)):
 
     return {"message": "Sample loaded successfully.", "columns": df.columns.tolist()}
 
-@app.post("/pue/gen/suggest_features", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/suggest_features", tags=["PUEModelGenerator"])
 def suggest_features(model_name: str = Form(...)):
     file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
     if not Path(file_location):
@@ -137,7 +137,7 @@ def suggest_features(model_name: str = Form(...)):
     suggested = corrs[(corrs.index != 'pue') & (corrs > threshold)].index.tolist()
     return {"suggested_features": suggested, "correlations": corrs.to_dict()}
 
-@app.post("/pue/gen/train_model", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/train_model", tags=["PUEModelGenerator"])
 def train_model(
     model_name: str = Form(...),
     features: str = Form(...),
@@ -173,7 +173,6 @@ def train_model(
     joblib.dump(scaler, Path(MODEL_FOLDER, f'{model_name}_scaler.gz'))
     stored_data[model_name] = features
 
-
     with model_lock:
         model = get_model(model_name)
         y_pred = model.predict(X_test).flatten()
@@ -198,7 +197,7 @@ def train_model(
 
     return {"message": "Model trained successfully.", "loss": float(loss), "mae": float(mae), "r2": float(r2)}
 
-@app.post("/pue/gen/predict", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/predict", tags=["PUEModelGenerator"])
 def predict_pue(
     input: str = Form(...),
     model_name: str = Form(...),
@@ -254,8 +253,6 @@ def predict_pue(
         with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2)
 
-    print(prediction)
-
     return {"pue_prediction": prediction}
 
 def update_prediction_stats():
@@ -284,7 +281,7 @@ def update_prediction_stats():
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)
 
-@app.post("/pue/gen/example_input", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/example_input", tags=["PUEModelGenerator"])
 def get_example_input(
     features: str = Form(...),
     model_name: str = Form(...)
@@ -304,7 +301,7 @@ def get_example_input(
     row = df[features].dropna().sample(1).iloc[0]
     return {"example": row.to_dict()}
 
-@app.post("/pue/gen/automl_train", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/automl_train", tags=["PUEModelGenerator"])
 async def automl_train_streaming(
     model_name: str = Form(...),
     features: str = Form(...),
@@ -340,12 +337,15 @@ async def automl_train_streaming(
                     tf.keras.layers.Dense(32, activation='relu'),
                     tf.keras.layers.Dense(1)
                 ])
+                
+                #with model_lock:
+                    #model = get_model(model_name)
+                    
+                
                 model.compile(optimizer='adam', loss='mse')
                 history = model.fit(X_train, y_train, epochs=epochs, batch_size=16, verbose=0)
 
-                with model_lock:
-                    model = get_model(model_name)
-                    y_pred = model.predict(X_test).flatten()
+                y_pred = model.predict(X_test).flatten()
                 loss = history.history['loss'][-1]
                 mae = mean_absolute_error(y_test, y_pred)
                 r2 = r2_score(y_test, y_pred)
@@ -387,7 +387,7 @@ class SaveAutoMLRequest(BaseModel):
     model_temp_id: str
     final_model_name: str
 
-@app.post("/pue/gen/save_automl_model", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/save_automl_model", tags=["PUEModelGenerator"])
 async def save_automl_model(payload: SaveAutoMLRequest):
     temp_id = payload.model_temp_id
     final_name = payload.final_model_name
@@ -432,7 +432,7 @@ async def save_automl_model(payload: SaveAutoMLRequest):
 
     return {"message": "Model saved successfully!"}
 
-@app.post("/pue/gen/simulation/delete", tags=["PUEModelGenerator"])
+@app.post("/pulse/generator/simulation/delete", tags=["PUEModelGenerator"])
 async def simulation_delete(model_name: str = Form(...), sim_id: int = Form(...)):
     summary_path = Path(SUMMARY_FOLDER) / f"{model_name}.json"
 
@@ -455,7 +455,7 @@ async def simulation_delete(model_name: str = Form(...), sim_id: int = Form(...)
 
     return {"message": f"Simulation {sim_id} deleted successfully."}
 
-@app.post("/pue/exp/simulations/clear", tags=["PUEModelExplorer"])
+@app.post("/pulse/explorer/simulations/clear", tags=["PUEModelExplorer"])
 async def simulations_clear(model_name: str = Form(...)):
     summary_path = Path(SUMMARY_FOLDER) / f"{model_name}.json"
 
@@ -474,22 +474,22 @@ async def simulations_clear(model_name: str = Form(...)):
     return {"message": "All simulations cleared."}
 
 
-@app.get("/pue/exp/models", tags=["PUEModelExplorer"])
+@app.get("/pulse/explorer/models", tags=["PUEModelExplorer"])
 def list_models():
     if not MODEL_FOLDER.exists():
         return {"models": []}
     model_names = [f.stem for f in MODEL_FOLDER.iterdir() if f.suffix == ".h5"]
     return {"models": model_names}
 
-@app.get("/pue/exp/summary/{model_name}", tags=["PUEModelExplorer"])
+@app.get("/pulse/explorer/summary/{model_name}", tags=["PUEModelExplorer"])
 def get_model_summary(model_name: str):
-    summary_file = Path("summaries", f"{model_name}.json")
+    summary_file = Path(SUMMARY_FOLDER, f"{model_name}.json")
     if not Path(summary_file):
         return {"error": "Summary not found"}
     with open(summary_file, "r") as f:
         return json.load(f)
 
-@app.delete("/pue/exp/delete/{model_name}", tags=["PUEModelExplorer"])
+@app.delete("/pulse/explorer/delete/{model_name}", tags=["PUEModelExplorer"])
 def delete_model(model_name: str):
     deleted = []
     errors = []
@@ -510,7 +510,7 @@ def delete_model(model_name: str):
 
     return {"deleted": deleted, "errors": errors}
 
-@app.get("/pue/exp/download/{model_name}.zip", tags=["PUEModelExplorer"])
+@app.get("/pulse/explorer/download/{model_name}.zip", tags=["PUEModelExplorer"])
 def download_model_zip(model_name: str):
     model_path = Path(MODEL_FOLDER, f"{model_name}.h5")
     scaler_path = Path(MODEL_FOLDER, f"{model_name}_scaler.gz")
@@ -531,36 +531,51 @@ def download_model_zip(model_name: str):
     return FileResponse(zip_path, filename=f"{model_name}.zip", media_type="application/zip", background=tasks)     
 
 # DATASETS
-@app.get("/pue/datasets/list", tags=["PUEDatasets"])
+@app.get("/pulse/datasets/list", tags=["PUEDatasets"])
 async def list_datasets():
-    datasets_path = Path("datasets")
-    datasets = [f.name for f in datasets_path.glob("*.csv")]
+    datasets = [f.name for f in DATASETS_FOLDER.glob("*.csv")]
     return {"datasets": datasets}
 
-@app.get("/pue/datasets/load/{dataset_name}", tags=["PUEDatasets"])
+@app.get("/pulse/datasets/load/{dataset_name}", tags=["PUEDatasets"])
 async def load_dataset(dataset_name: str):
-    dataset_path = Path("datasets") / dataset_name
+    dataset_path = DATASETS_FOLDER / dataset_name
     if not dataset_path.exists():
         raise HTTPException(status_code=404, detail="Dataset not found")
 
+    # Leer el dataset completo
     df = pd.read_csv(dataset_path, sep=';')
-    
-    sample = df.head(100).to_dict(orient="records")
-    summary = df.describe().to_dict()
+
+    # Determinar el modelo asociado (sin extensión)
+    model_name = dataset_name.rsplit('.', 1)[0]
+    summary_path = Path("summaries") / f"{model_name}.json"
+
+    if not summary_path.exists():
+        raise HTTPException(status_code=404, detail="Model summary not found")
+
+    # Leer features desde el JSON
+    with open(summary_path, "r") as f:
+        summary_data = json.load(f)
+    features = summary_data.get("features", [])
+
+    # Filtrar solo las columnas que están en las features
+    filtered_df = df[[col for col in features if col in df.columns]]
+
+    sample = filtered_df.head(100).to_dict(orient="records")
+    summary = filtered_df.describe().to_dict()
 
     return {
         "sample": sample,
         "summary": summary,
-        "columns": df.columns.tolist()
+        "columns": filtered_df.columns.tolist()
     }
 	
 class FilterRequest(BaseModel):
     dataset_name: str
     filters: List[dict]  # Cada filtro: {"column": "temp", "operator": ">", "value": 25}
 
-@app.post("/pue/datasets/filter", tags=["PUEDatasets"])
+@app.post("/pulse/datasets/filter", tags=["PUEDatasets"])
 async def filter_dataset(request: FilterRequest):
-    dataset_path = Path("datasets") / request.dataset_name
+    dataset_path = DATASETS_FOLDER / request.dataset_name
     if not dataset_path.exists():
         raise HTTPException(status_code=404, detail="Dataset not found")
 
@@ -589,33 +604,48 @@ async def filter_dataset(request: FilterRequest):
         "total_rows": len(df)
     }
 
-@app.get("/pue/datasets/plots/{dataset_name}", tags=["PUEDatasets"])
+@app.get("/pulse/datasets/plots/{dataset_name}", tags=["PUEDatasets"])
 async def generate_plots(dataset_name: str):
     dataset_path = Path("datasets") / dataset_name
     if not dataset_path.exists():
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    # Important: specify separator ; to correctly parse your CSV
+    # Leer el CSV
     df = pd.read_csv(dataset_path, sep=';')
 
-    numeric_df = df.select_dtypes(include=['number'])
+    # Determinar el modelo asociado (mismo nombre sin extensión)
+    model_name = dataset_name.rsplit('.', 1)[0]
+    summary_path = Path("summaries") / f"{model_name}.json"
 
-    fig, ax = plt.subplots(figsize=(10, 10))
+    if not summary_path.exists():
+        raise HTTPException(status_code=404, detail="Model summary not found")
+
+    # Leer JSON y extraer las features
+    with open(summary_path, "r") as f:
+        summary_data = json.load(f)
+    features = summary_data.get("features", [])
+
+    # Seleccionar solo las variables numéricas que están en features
+    numeric_df = df.select_dtypes(include=['number'])
+    numeric_df = numeric_df[[col for col in features if col in numeric_df.columns]]
+
+    buf = io.BytesIO()
 
     if numeric_df.empty:
-        # Generate a simple image indicating no numerical data
+        fig, ax = plt.subplots(figsize=(15, 15))
         ax.text(0.5, 0.5, 'No numerical columns available to plot.', 
                 horizontalalignment='center', verticalalignment='center', 
                 fontsize=12, transform=ax.transAxes)
         ax.set_axis_off()
+        plt.tight_layout()
     else:
-        numeric_df.hist(ax=ax)
+        axes = numeric_df.hist(figsize=(15, 15))
+        plt.tight_layout(pad=2.0)
 
-    buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
     histogram_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    plt.close(fig)
+    plt.close('all')
 
     return {"histogram": histogram_base64}
 
@@ -678,7 +708,7 @@ class AskRequest(BaseModel):
     model_name: str
 
 # Main endpoint
-@app.post("/pue/llm/ask", tags=["PUELLM"])
+@app.post("/pulse/llm/ask", tags=["PUELLM"])
 async def ask_question(body: AskRequest, stream: bool = True):
     try:
         load_dataset_once()
@@ -793,7 +823,7 @@ Please answer the following question:
     return StreamingResponse(generate(), media_type="application/json")
 
 def log_llm_interaction_to_summary(query: str, response: str, model: str, model_name: str):
-    summary_path = Path("summaries") / f"{model_name}.json"
+    summary_path = Path(SUMMARY_FOLDER) / f"{model_name}.json"
     if not summary_path.exists():
         return
 
@@ -840,7 +870,7 @@ def update_llm_stats():
     with open(stats_path, "w") as f:
         json.dump(stats, f, indent=2)
   
-@app.get("/pue/llm/history", tags=["PUELLM"])
+@app.get("/pulse/llm/history", tags=["PUELLM"])
 def get_llm_history():
     history_path = Path(".config/llm_history.json")
     if history_path.exists():
@@ -852,7 +882,7 @@ def get_llm_history():
     return []
 
 # History
-@app.get("/pue/his/{model_name}", tags=["PUEHistory"])
+@app.get("/pulse/history/{model_name}", tags=["PUEHistory"])
 def get_model_history(model_name: str):
     summary_path = SUMMARY_FOLDER / f"{model_name}.json"
 
@@ -870,9 +900,9 @@ def get_model_history(model_name: str):
         "llm_questions": llm_questions,
     }
 
-@app.delete("/pue/his/clear_llm/{model_name}", tags=["PUEHistory"])
+@app.delete("/pulse/history/clear_llm/{model_name}", tags=["PUEHistory"])
 def clear_llm_history(model_name: str):
-    summary_path = Path("summaries") / f"{model_name}.json"
+    summary_path = Path(SUMMARY_FOLDER) / f"{model_name}.json"
 
     if not summary_path.exists():
         raise HTTPException(status_code=404, detail="Model summary not found.")
@@ -891,9 +921,9 @@ def clear_llm_history(model_name: str):
 
     return {"message": f"LLM history cleared for model '{model_name}'."}
 
-@app.delete("/pue/his/clear_simulations/{model_name}", tags=["PUEHistory"])
+@app.delete("/pulse/history/clear_simulations/{model_name}", tags=["PUEHistory"])
 def clear_simulations_history(model_name: str):
-    summary_path = Path("summaries") / f"{model_name}.json"
+    summary_path = Path(SUMMARY_FOLDER) / f"{model_name}.json"
 
     if not summary_path.exists():
         raise HTTPException(status_code=404, detail="Model summary not found.")
@@ -909,7 +939,7 @@ def clear_simulations_history(model_name: str):
 
     return {"message": f"Simulations cleared for model '{model_name}'."}
 
-@app.delete("/pue/his/delete_item", tags=["PUEHistory"])
+@app.delete("/pulse/history/delete_item", tags=["PUEHistory"])
 def delete_history_item(
     payload: dict = Body(...)
 ):
@@ -920,7 +950,7 @@ def delete_history_item(
     if not all([model, action_type, timestamp]):
         raise HTTPException(status_code=400, detail="Missing required fields.")
 
-    summary_path = Path("summaries") / f"{model}.json"
+    summary_path = Path(SUMMARY_FOLDER) / f"{model}.json"
     if not summary_path.exists():
         raise HTTPException(status_code=404, detail="Model summary not found.")
 
@@ -948,7 +978,7 @@ def delete_history_item(
     return {"message": f"{action_type} item deleted from model '{model}'."}
 
 # SETTINGS
-@app.post("/pue/set/default_model", tags=["PUESettings"])
+@app.post("/pulse/settings/default_model", tags=["PUESettings"])
 def set_default_model(model_name: str = Form(...)):
     config_path = Path(".config", "config.json")
     Path(".config").mkdir(parents=True, exist_ok=True)
@@ -956,7 +986,7 @@ def set_default_model(model_name: str = Form(...)):
         json.dump({"default_model": model_name}, f)
     return {"message": f"Default model set to '{model_name}'"}
 
-@app.get("/pue/set/default_model", tags=["PUESettings"])
+@app.get("/pulse/settings/default_model", tags=["PUESettings"])
 def get_default_model():
     config_path = Path(".config", "config.json")
     if not Path(config_path):
@@ -965,7 +995,7 @@ def get_default_model():
         config = json.load(f)
     return {"default_model": config.get("default_model", "")}
 
-@app.delete("/pue/set/delete_all", tags=["PUESettings"])
+@app.delete("/pulse/settings/delete_all", tags=["PUESettings"])
 def delete_all_models():
     deleted = []
     errors = []
@@ -995,7 +1025,7 @@ def delete_all_models():
 
     return {"deleted": deleted, "errors": errors}
 
-@app.get("/pue/set/download_all", tags=["PUESettings"])
+@app.get("/pulse/settings/download_all", tags=["PUESettings"])
 def download_all_models():
     folders = [
         (MODEL_FOLDER, "*"),
@@ -1018,7 +1048,7 @@ def download_all_models():
 
 
 # STATS
-@app.get("/pue/stats", tags=["PUEStats"])
+@app.get("/pulse/statistics", tags=["PUEStatistics"])
 def get_statistics():
     stats_path = Path(".config", "statistics.json")
     if Path(stats_path):
@@ -1027,17 +1057,16 @@ def get_statistics():
     else:
         return {"predictions_per_month": {}, "llm_questions": 0}
     
-@app.get("/pue/stats/dashboard", tags=["PUEStats"])
+@app.get("/pulse/statistics/dashboard", tags=["PUEStatistics"])
 def get_dashboard_statistics():
-    summaries_path = "summaries"
     stats_path = Path(".config", "statistics.json")
 
     models = []
     r2_list = []
 
     # Read model summaries
-    if Path(summaries_path).exists():
-        for file in Path(summaries_path).iterdir():
+    if Path(SUMMARY_FOLDER).exists():
+        for file in Path(SUMMARY_FOLDER).iterdir():
             if file.suffix == ".json":
                 try:
                     with open(file) as f:
@@ -1075,7 +1104,7 @@ def get_dashboard_statistics():
         "llm_questions": stats.get("llm_questions", 0)
     }
 
-@app.delete("/pue/set/purge", tags=["PUESettings"])
+@app.delete("/pulse/settings/purge", tags=["PUESettings"])
 def purge_orphan_files():
     deleted_files = []
     errors = []

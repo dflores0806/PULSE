@@ -48,7 +48,7 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
     formData.append('epochs_options', JSON.stringify(epochsOptions))
     formData.append('test_size_options', JSON.stringify(testSizeOptions))
 
-    const response = await fetch(`${API_BASE}/pue/gen/automl_train`, {
+    const response = await fetch(`${API_BASE}/pulse/generator/automl_train`, {
       method: 'POST',
       body: formData,
     })
@@ -93,7 +93,7 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
     const finalModelName = `${modelName}-${formatted}`
 
     try {
-      await axios.post(`${API_BASE}/pue/gen/save_automl_model`, {
+      await axios.post(`${API_BASE}/pulse/generator/save_automl_model`, {
         model_temp_id: selected.temp_id,
         final_model_name: finalModelName,
       })
@@ -218,12 +218,12 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
         ) : (
           <>
             <div className="mt-4">
-              <h4>✅ Model Saved Successfully!</h4>
+              <h4>✅ Model saved successfully!</h4>
               <CCard className="mb-4">
-                <CCardHeader>Model Summary</CCardHeader>
+                <CCardHeader>Model summary</CCardHeader>
                 <CCardBody>
                   <p>
-                    <strong>Model Name:</strong> {savedSummary.model_name}
+                    <strong>Model name:</strong> {savedSummary.model_name}
                   </p>
                   <p>
                     <strong>Features:</strong> {savedSummary.features.join(', ')}
@@ -232,7 +232,7 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
                     <strong>Epochs:</strong> {savedSummary.epochs}
                   </p>
                   <p>
-                    <strong>Test Size:</strong> {savedSummary.test_size}%
+                    <strong>Test size:</strong> {savedSummary.test_size}%
                   </p>
                   <p>
                     <strong>Loss:</strong> {savedSummary.metrics.loss.toFixed(6)}

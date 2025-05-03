@@ -38,14 +38,14 @@ const Dashboard = () => {
     const [stats, setStats] = useState(null)
 
     useEffect(() => {
-        axios.get(`${import.meta.env.VITE_API_BASE_URL}/pue/stats/dashboard`)
+        axios.get(`${import.meta.env.VITE_API_BASE_URL}/pulse/statistics/dashboard`)
             .then(res => setStats(res.data))
             .catch(() => setStats(null))
     }, [])
 
     useEffect(() => {
         if (model) {
-            fetch(import.meta.env.VITE_API_BASE_URL + '/pue/exp/summary/' + model)
+            fetch(import.meta.env.VITE_API_BASE_URL + '/pulse/explorer/summary/' + model)
                 .then(res => res.json())
                 .then(data => setSummary(data))
                 .catch(() => setSummary(null))

@@ -60,7 +60,7 @@ function ModelSummary({ modelName, features, epochs, testSize, metrics }) {
             onClick={() => {
               const download = (filename) => {
                 const link = document.createElement('a')
-                link.href = `${API_BASE}/pue/exp/download/${filename}`
+                link.href = `${API_BASE}/pulse/explorer/download/${filename}`
                 link.download = filename
                 document.body.appendChild(link)
                 link.click()

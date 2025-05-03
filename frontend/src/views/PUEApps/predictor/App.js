@@ -36,7 +36,7 @@ const PredictorApp = () => {
   useEffect(() => {
     if (model) {
       axios
-        .get(`${API_BASE}/pue/exp/summary/${model}`)
+        .get(`${API_BASE}/pulse/explorer/summary/${model}`)
         .then((res) => {
           if (res.data.features) {
             setFeatures(res.data.features)
@@ -60,7 +60,7 @@ const PredictorApp = () => {
     formData.append('model_name', model)
     formData.append('features', JSON.stringify(features))
     axios
-      .post(`${import.meta.env.VITE_API_BASE_URL}/pue/gen/example_input`, formData)
+      .post(`${import.meta.env.VITE_API_BASE_URL}/pulse/generator/example_input`, formData)
       .then((res) => {
         setInputs(res.data.example || {})
       })
@@ -81,7 +81,7 @@ const PredictorApp = () => {
     formData.append('save_simulation', 'true')
 
     axios
-      .post(`${import.meta.env.VITE_API_BASE_URL}/pue/gen/predict`, formData)
+      .post(`${import.meta.env.VITE_API_BASE_URL}/pulse/generator/predict`, formData)
       .then((res) => {
         setResult(res.data.pue_prediction)
         setError('')

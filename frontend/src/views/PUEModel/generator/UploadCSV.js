@@ -20,7 +20,7 @@ function UploadCSV({ onUploadSuccess, modelName }) {
     const formData = new FormData();
     formData.append('model_name', modelName);
     try {
-      const res = await axios.post(`${API_BASE}/pue/gen/load_sample`, formData);
+      const res = await axios.post(`${API_BASE}/pulse/generator/load_sample`, formData);
       setStatus(res.data.message || '');
       setError('');
       onUploadSuccess(res.data.columns);
@@ -37,7 +37,7 @@ function UploadCSV({ onUploadSuccess, modelName }) {
     formData.append('file', file);
     formData.append('model_name', modelName);
     try {
-      const response = await axios.post(`${API_BASE}/pue/gen/upload_data`, formData, {
+      const response = await axios.post(`${API_BASE}/pulse/generator/upload_data`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setStatus('File uploaded successfully.');

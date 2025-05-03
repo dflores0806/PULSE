@@ -28,7 +28,7 @@ function PredictionForm({ features, modelName, onPredictionSuccess, onPrediction
       const formData = new FormData()
       formData.append('model_name', modelName)
       formData.append('features', JSON.stringify(features))
-      const res = await axios.post(`${API_BASE}/pue/gen/example_input`, formData, {
+      const res = await axios.post(`${API_BASE}/pulse/generator/example_input`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       setInputs(res.data.example || {})
@@ -52,7 +52,7 @@ function PredictionForm({ features, modelName, onPredictionSuccess, onPrediction
       const formData = new FormData()
       formData.append('model_name', modelName)
       formData.append('input', JSON.stringify({ values: inputs }))
-      const res = await axios.post(`${API_BASE}/pue/gen/predict`, formData, {
+      const res = await axios.post(`${API_BASE}/pulse/generator/predict`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
 
@@ -83,9 +83,11 @@ function PredictionForm({ features, modelName, onPredictionSuccess, onPrediction
     ],
   }
 
-  const half = Math.ceil(features.length / 2)
-  const col1 = features.slice(0, half)
-  const col2 = features.slice(half)
+  const quarter = Math.ceil(features.length / 4)
+  const col1 = features.slice(0, quarter)
+  const col2 = features.slice(quarter, quarter * 2)
+  const col3 = features.slice(quarter * 2, quarter * 3)
+  const col4 = features.slice(quarter * 3)
 
   return (
     <Card className="mb-4">
@@ -93,34 +95,22 @@ function PredictionForm({ features, modelName, onPredictionSuccess, onPrediction
         <Card.Title>4. Predict PUE from your inputs</Card.Title>
         <Form>
           <Row>
-            <Col md={6}>
-              {col1.map((feature, idx) => (
-                <Form.Group key={idx} className="mb-2">
-                  <Form.Label>{feature}</Form.Label>
-                  <Form.Control
-                    type="number"
-                    step="any"
-                    name={feature}
-                    value={inputs[feature] !== undefined ? inputs[feature] : ''}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              ))}
-            </Col>
-            <Col md={6}>
-              {col2.map((feature, idx) => (
-                <Form.Group key={half + idx} className="mb-2">
-                  <Form.Label>{feature}</Form.Label>
-                  <Form.Control
-                    type="number"
-                    step="any"
-                    name={feature}
-                    value={inputs[feature] !== undefined ? inputs[feature] : ''}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              ))}
-            </Col>
+            {[col1, col2, col3, col4].map((column, colIdx) => (
+              <Col md={3} key={colIdx}>
+                {column.map((feature, idx) => (
+                  <Form.Group key={`${colIdx}-${idx}`} className="mb-2">
+                    <Form.Label>{feature}</Form.Label>
+                    <Form.Control
+                      type="number"
+                      step="any"
+                      name={feature}
+                      value={inputs[feature] !== undefined ? inputs[feature] : ''}
+                      onChange={handleChange}
+                    />
+                  </Form.Group>
+                ))}
+              </Col>
+            ))}
           </Row>
         </Form>
 

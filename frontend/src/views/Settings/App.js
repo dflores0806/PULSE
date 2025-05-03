@@ -15,13 +15,13 @@ const Settings = () => {
 
   useEffect(() => {
     axios
-      .get(`${API_BASE}/pue/exp/models`)
+      .get(`${API_BASE}/pulse/explorer/models`)
       .then(async (res) => {
         const modelList = res.data.models || []
         setModels(modelList)
         setConnection(true)
 
-        const defaultModelRes = await axios.get(`${API_BASE}/pue/set/default_model`)
+        const defaultModelRes = await axios.get(`${API_BASE}/pulse/settings/default_model`)
         setSelected(defaultModelRes.data.default_model || '')
       })
       .catch(() => setConnection(false))
@@ -31,7 +31,7 @@ const Settings = () => {
     const formData = new FormData()
     formData.append('model_name', selected)
     axios
-      .post(`${API_BASE}/pue/set/default_model`, formData)
+      .post(`${API_BASE}/pulse/settings/default_model`, formData)
       .then(() => {
         alert(`Model "${selected}" set as default`)
         window.location.reload()
@@ -48,7 +48,7 @@ const Settings = () => {
       )
     ) {
       axios
-        .delete(`${API_BASE}/pue/set/delete_all`)
+        .delete(`${API_BASE}/pulse/settings/delete_all`)
         .then(() => {
           alert('All models deleted successfully')
           window.location.reload()
@@ -59,7 +59,7 @@ const Settings = () => {
 
   const handleDownloadAll = () => {
     const link = document.createElement('a')
-    link.href = `${API_BASE}/pue/set/download_all`
+    link.href = `${API_BASE}/pulse/settings/download_all`
     link.download = 'all_models.zip'
     document.body.appendChild(link)
     link.click()
@@ -73,7 +73,7 @@ const Settings = () => {
       )
     ) {
       try {
-        const res = await axios.delete(`${API_BASE}/pue/set/purge`)
+        const res = await axios.delete(`${API_BASE}/pulse/settings/purge`)
         alert(`✅ Purge completed successfully!\n\nFiles deleted: ${res.data.deleted.length}`)
       } catch (err) {
         console.error(err)

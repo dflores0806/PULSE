@@ -20,7 +20,7 @@ function PredictorForm({ features }) {
     setPrediction(null);
 
     try {
-      const res = await axios.post(`${API_BASE}/pue/predict`, {
+      const res = await axios.post(`${API_BASE}/pulse/generator/predict`, {
         values
       });
       setPrediction(res.data.pue_prediction);

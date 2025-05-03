@@ -58,6 +58,7 @@ This diagram outlines the user's flow from opening the web app to receiving feed
 - scikit-learn
 - joblib
 - uvicorn
+- Ollama
 
 ### Frontend
 - Node.js 18+
@@ -81,7 +82,24 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
 
-#### Config files:
+#### Ollama installing (for LLM features)
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+# Install models engines
+ollama run phi
+ollama run tinyllama
+ollama run llama2 
+ollama run mistral
+ollama run gemma
+# Configure as a service
+sudo systemctl enable ollama
+sudo systemctl start ollama
+# Check Ollama
+sudo systemctl status ollama
+```
+
+#### Config files
 
 - `.config/config.json` → active model:
 ```json
@@ -131,71 +149,76 @@ npm run dev
 
 ### 🧩 Backend endpoints
 
+#### Login
+| Method | Endpoint                             | Description             |
+|--------|--------------------------------------|-------------------------|
+| POST   | `/auth/login`                        | Login in PULSE          |
+
 #### PUEModelGenerator
 
 | Method | Endpoint                             | Description             |
 |--------|--------------------------------------|-------------------------|
-| POST   | `/pue/gen/upload_data`               | Upload Data             |
-| POST   | `/pue/gen/load_sample`               | Load Sample             |
-| POST   | `/pue/gen/suggest_features`          | Suggest Features        |
-| POST   | `/pue/gen/train_model`               | Train Model             |
-| POST   | `/pue/gen/predict`                   | Predict PUE             |
-| GET    | `/pue/gen/example_input/{model}`     | Get Example Input       |
-| POST   | `/pue/gen/automl_train`              | AutoML Train Streaming  |
-| POST   | `/pue/gen/save_automl_model`         | Save AutoML Model       |
-| DELETE | `/pue/gen/simulation/delete/{model}/{timestamp}` | Simulation Delete |
+| POST   | `/pulse/generator/upload_data`               | Upload Data             |
+| POST   | `/pulse/generator/load_sample`               | Load Sample             |
+| POST   | `/pulse/generator/suggest_features`          | Suggest Features        |
+| POST   | `/pulse/generator/train_model`               | Train Model             |
+| POST   | `/pulse/generator/predict`                   | Predict PUE             |
+| GET    | `/pulse/generator/example_input/{model}`     | Get Example Input       |
+| POST   | `/pulse/generator/automl_train`              | AutoML Train Streaming  |
+| POST   | `/pulse/generator/save_automl_model`         | Save AutoML Model       |
+| DELETE | `/pulse/generator/simulation/delete/{model}/{timestamp}` | Simulation Delete |
 
 #### PUEModelExplorer
 
 | Method | Endpoint                                      | Description             |
 |--------|-----------------------------------------------|-------------------------|
-| POST   | `/pue/exp/simulations/clear`                  | Simulations Clear       |
-| GET    | `/pue/exp/models`                             | List Models             |
-| GET    | `/pue/exp/summary/{model_name}`               | Get Model Summary       |
-| DELETE | `/pue/exp/delete/{model_name}`                | Delete Model            |
-| GET    | `/pue/exp/download/{model_name}.zip`          | Download Model Zip      |
+| POST   | `/pulse/explorer/simulations/clear`                  | Simulations Clear       |
+| GET    | `/pulse/explorer/models`                             | List Models             |
+| GET    | `/pulse/explorer/summary/{model_name}`               | Get Model Summary       |
+| DELETE | `/pulse/explorer/delete/{model_name}`                | Delete Model            |
+| GET    | `/pulse/explorer/download/{model_name}.zip`          | Download Model Zip      |
 
 #### PUEDatasets
 
 | Method | Endpoint                                      | Description             |
 |--------|-----------------------------------------------|-------------------------|
-| GET    | `/pue/datasets/list`                          | List Datasets           |
-| GET    | `/pue/datasets/load/{dataset_name}`           | Load Dataset            |
-| POST   | `/pue/datasets/filter`                        | Filter Dataset          |
-| GET    | `/pue/datasets/plots/{dataset_name}`          | Generate Plots          |
+| GET    | `/pulse/datasets/list`                          | List Datasets           |
+| GET    | `/pulse/datasets/load/{dataset_name}`           | Load Dataset            |
+| POST   | `/pulse/datasets/filter`                        | Filter Dataset          |
+| GET    | `/pulse/datasets/plots/{dataset_name}`          | Generate Plots          |
 
 #### PUELLM
 
 | Method | Endpoint              | Description             |
 |--------|-----------------------|-------------------------|
-| POST   | `/pue/llm/ask`        | Ask Question            |
-| GET    | `/pue/llm/history`    | Get LLM History         |
+| POST   | `/pulse/llm/ask`        | Ask Question            |
+| GET    | `/pulse/llm/history`    | Get LLM History         |
 
 #### PUEHistory
 
 | Method | Endpoint                                     | Description                |
 |--------|----------------------------------------------|----------------------------|
-| GET    | `/pue/his/{model_name}`                      | Get Model History          |
-| DELETE | `/pue/his/clear_llm/{model_name}`            | Clear LLM History          |
-| DELETE | `/pue/his/clear_simulations/{model_name}`    | Clear Simulations History  |
-| DELETE | `/pue/his/delete_item`                       | Delete History Item        |
+| GET    | `/pulse/history/{model_name}`                      | Get Model History          |
+| DELETE | `/pulse/history/clear_llm/{model_name}`            | Clear LLM History          |
+| DELETE | `/pulse/history/clear_simulations/{model_name}`    | Clear Simulations History  |
+| DELETE | `/pulse/history/delete_item`                       | Delete History Item        |
 
 #### PUESettings
 
 | Method | Endpoint                    | Description             |
 |--------|-----------------------------|-------------------------|
-| GET    | `/pue/set/default_model`    | Get Default Model       |
-| POST   | `/pue/set/default_model`    | Set Default Model       |
-| DELETE | `/pue/set/delete_all`       | Delete All Models       |
-| GET    | `/pue/set/download_all`     | Download All Models     |
-| DELETE | `/pue/set/purge`            | Purge Orphan Files      |
+| GET    | `/pulse/settings/default_model`    | Get Default Model       |
+| POST   | `/pulse/settings/default_model`    | Set Default Model       |
+| DELETE | `/pulse/settings/delete_all`       | Delete All Models       |
+| GET    | `/pulse/settings/download_all`     | Download All Models     |
+| DELETE | `/pulse/settings/purge`            | Purge Orphan Files      |
 
 #### PUEStats
 
 | Method | Endpoint               | Description             |
 |--------|------------------------|-------------------------|
-| GET    | `/pue/stats`           | Get Statistics          |
-| GET    | `/pue/stats/dashboard` | Get Dashboard Stats     |
+| GET    | `/pulse/statistics`           | Get Statistics          |
+| GET    | `/pulse/statistics/dashboard` | Get Dashboard Stats     |
 
 ---
 
@@ -333,11 +356,11 @@ sequenceDiagram
 
     %% Manual Prediction
     User->>Frontend: Fill form & select model
-    Frontend->>Backend: GET /pue/set/default_model
+    Frontend->>Backend: GET /pulse/settings/default_model
     Backend-->>Frontend: Return selected model
 
     User->>Frontend: Click predict
-    Frontend->>Backend: POST /pue/gen/predict
+    Frontend->>Backend: POST /pulse/generator/predict
     Backend->>Model: Load model
     Backend->>Dataset: Load scaler & features
     Model-->>Backend: Predict PUE
@@ -346,9 +369,9 @@ sequenceDiagram
 
     %% Scenario Simulation
     User->>Frontend: Click fill scenario
-    Frontend->>Backend: GET /pue/exp/summary/{model}
+    Frontend->>Backend: GET /pulse/explorer/summary/{model}
     Backend-->>Frontend: Return dataset sample
-    Frontend->>Backend: POST /pue/gen/predict (with example)
+    Frontend->>Backend: POST /pulse/generator/predict (with example)
     Backend->>Model: Predict with selected inputs
     Model-->>Backend: Return simulated PUE
     Backend-->>Frontend: Return result
@@ -356,16 +379,16 @@ sequenceDiagram
 
     %% AutoML
     User->>Frontend: Upload dataset for AutoML
-    Frontend->>Backend: POST /pue/gen/automl_train
+    Frontend->>Backend: POST /pulse/generator/automl_train
     Backend->>Dataset: Analyze structure & correlations
     Backend->>Model: Auto-train multiple configurations
     Model-->>Backend: Return best performing model
     User->>Frontend: Click Save Model
-    Frontend->>Backend: POST /pue/gen/save_automl_model
+    Frontend->>Backend: POST /pulse/generator/save_automl_model
 
     %% LLM Assistant
     User->>Frontend: Ask question to LLM
-    Frontend->>Backend: POST /pue/llm/ask
+    Frontend->>Backend: POST /pulse/llm/ask
     Backend->>Dataset: Load data context & stats
     Backend->>LLM: Send prompt with context
     LLM-->>Backend: Stream response
@@ -374,11 +397,11 @@ sequenceDiagram
 
     %% History Actions
     User->>Frontend: Open history for selected model
-    Frontend->>Backend: GET /pue/his/{model}
+    Frontend->>Backend: GET /pulse/history/{model}
     Backend-->>Frontend: Return simulations & LLM queries
     User->>Frontend: View, replicate, or delete entry
-    Frontend->>Backend: POST /pue/gen/predict or POST /pue/llm/ask (replication)
-    Frontend->>Backend: DELETE /pue/his/delete_item (deletion)
+    Frontend->>Backend: POST /pulse/generator/predict or POST /pulse/llm/ask (replication)
+    Frontend->>Backend: DELETE /pulse/history/delete_item (deletion)
     Backend-->>Frontend: Return updated history or results
     Frontend-->>User: Update interface with new result
 
