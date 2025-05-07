@@ -60,7 +60,7 @@ const Login = () => {
                 <CCardBody>
                   <CForm onSubmit={handleSubmit}>
                     <div className="text-center mb-4">
-                      <img src={pulseLogo} alt="PULSE Logo" style={{ height: '50px' }} />
+                      <img src={pulseLogo} alt="PULSE Logo" style={{ width: '100%' }} />
                     </div>
                     <p className="text-body-secondary">Log in to your account</p>
                     {error && <p className="text-danger">{error}</p>}
@@ -99,7 +99,7 @@ const Login = () => {
                   </CForm>
                 </CCardBody>
               </CCard>
-              <CCard className="text-white bg-primary py-5" style={{ width: '44%' }}>
+              <CCard className="text-white bg-primary py-5" style={{ width: '100%' }}>
                 <CCardBody className="text-center">
                   <div>
                     <h2>Login</h2>

@@ -61,6 +61,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+#app = FastAPI(root_path="/pulse/api")
 
 def get_model(model_name):
     if model_name not in loaded_models:
