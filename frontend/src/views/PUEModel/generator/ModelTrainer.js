@@ -33,19 +33,52 @@ function ModelTrainer({ features, onTrainingComplete, modelName }) {
       formData.append('epochs', epochs.toString());
       formData.append('test_size', testSize.toString());
 
+      setStatus('Training started...');
+      setLoading(true);
+
       const res = await axios.post(`${API_BASE}/pulse/generator/train_model`, formData);
-      const { loss, mae, r2 } = res.data;
-      const log = `Training complete.\nLoss: ${loss.toFixed(4)}\nMAE: ${mae.toFixed(4)}\nR²: ${r2.toFixed(4)}`;
-      setResultLog(log);
-      setStatus(res.data.message || 'Model trained successfully.');
-      onTrainingComplete(true, { loss, mae, r2 }, epochs, testSize);
+      const { task_id } = res.data;
+
+      const socket = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/train/${task_id}`);
+
+      socket.onmessage = (event) => {
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          setStatus(`Epoch ${data.epoch} / ${data.total_epochs} — Loss: ${data.loss.toFixed(4)} | MAE: ${data.mae.toFixed(4)} | MSE: ${data.mse.toFixed(4)}`);
+        };
+
+      };
+
+      const checkStatus = async () => {
+        const statusRes = await axios.get(`${API_BASE}/pue/gen/status/${task_id}`);
+        const status = statusRes.data.status;
+
+        if (status === 'completed') {
+          const summaryRes = await axios.get(`${API_BASE}/pulse/explorer/summary/${modelName}`);
+          const metrics = summaryRes.data.metrics;
+          const log = `Training complete.\nLoss: ${metrics.loss.toFixed(4)}\nMAE: ${metrics.mae.toFixed(4)}\nR²: ${metrics.r2.toFixed(4)}`;
+          setResultLog(log);
+          setStatus('Model trained successfully.');
+          onTrainingComplete(true, metrics, epochs, testSize);
+          setLoading(false);
+        } else if (status.startsWith('error')) {
+          setError(`Training failed: ${status}`);
+          onTrainingComplete(false);
+          setLoading(false);
+        } else {
+          setTimeout(checkStatus, 2000); // 2 segundos
+        }
+      };
+
+      checkStatus();
+
     } catch (err) {
       console.error(err);
-      setError('Error during model training.');
+      setError('Error starting training task.');
       onTrainingComplete(false);
-    } finally {
       setLoading(false);
     }
+
   };
 
   return (

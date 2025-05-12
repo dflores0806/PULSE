@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   CCard,
   CCardBody,
@@ -20,6 +20,7 @@ import {
 import axios from 'axios'
 import { cilMediaPlay, cilSave } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
+import { Alert } from 'react-bootstrap'
 
 const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatures }) => {
   const [selectedFeatures, setSelectedFeatures] = useState(suggestedFeatures || [])
@@ -29,6 +30,10 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
   const [results, setResults] = useState([])
   const [bestIdx, setBestIdx] = useState(null)
 
+  const [status, setStatus] = useState("")
+  const [error, setError] = useState("")
+
+
   const [trainingProgress, setTrainingProgress] = useState([])
   const [isTraining, setIsTraining] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
@@ -36,6 +41,24 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
   const [savedSummary, setSavedSummary] = useState(null)
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL
+
+  useEffect(() => {
+    if (trainingProgress.length > 0) {
+      const last = trainingProgress[trainingProgress.length - 1]
+      if (last.model_idx === last.total_models) {
+        setIsFinished(true)
+        setStatus("AutoML training completed. You can now save the best model.")
+
+        // Determinar el modelo con mejor R²
+        const bestIndex = trainingProgress.reduce((best, current, idx, arr) =>
+          current.r2 > arr[best].r2 ? idx : best
+          , 0)
+        setBestIdx(bestIndex)
+      }
+    }
+  }, [trainingProgress])
+
+
 
   const startAutoMLTraining = async () => {
     setIsTraining(true)
@@ -48,37 +71,73 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
     formData.append('epochs_options', JSON.stringify(epochsOptions))
     formData.append('test_size_options', JSON.stringify(testSizeOptions))
 
-    const response = await fetch(`${API_BASE}/pulse/generator/automl_train`, {
-      method: 'POST',
-      body: formData,
-    })
+    try {
+      const res = await fetch(`${API_BASE}/pulse/generator/automl_train_ws`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      const task_id = data.task_id
 
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
+      const socket = new WebSocket(`${API_BASE.replace(/^http/, 'ws')}/ws/automl/${task_id}`)
 
-    let buffer = ''
+      socket.onopen = () => {
+        setStatus("AutoML training started...")
+      }
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
 
-      buffer += decoder.decode(value, { stream: true })
+          if (data.error) {
+            setError(`Error during training: ${data.error}`)
+            setIsTraining(false)
+            setIsFinished(true)
+            socket.close()
+            return
+          }
 
-      let lines = buffer.split('\n')
+          // Progreso por época
+          if (data.epoch && data.total_epochs) {
+            setStatus(`Model ${data.model_idx} / ${data.total_models} — Epoch ${data.epoch} / ${data.total_epochs} — Loss: ${data.loss.toFixed(4)} | MAE: ${data.mae.toFixed(4)} | MSE: ${data.mse.toFixed(4)}`)
+            return
+          }
 
-      buffer = lines.pop() // Guarda lo incompleto
+          // Resumen del modelo (únicamente si is_summary == true)
+          if (data.is_summary) {
+            setTrainingProgress((prev) => {
+              const alreadyExists = prev.some(p => p.temp_id === data.temp_id)
+              return alreadyExists ? prev : [...prev, data]
+            })
+          }
 
-      for (let line of lines) {
-        if (line.trim()) {
-          const parsed = JSON.parse(line)
-          setTrainingProgress((prev) => [...prev, parsed])
+        } catch (e) {
+          console.error("❌ Error parsing AutoML message:", e)
         }
       }
-    }
 
-    setIsTraining(false)
-    setIsFinished(true)
+      socket.onerror = (err) => {
+        console.error("WebSocket AutoML error:", err)
+        setError("Connection error during AutoML training.")
+        setIsTraining(false)
+        setIsFinished(true)
+      }
+
+      socket.onclose = () => {
+        setStatus("AutoML training finished successfully.")
+        setIsTraining(false)
+        setIsFinished(true)
+      }
+
+
+
+    } catch (err) {
+      console.error('❌ AutoML WebSocket failed:', err)
+      setIsTraining(false)
+      setIsFinished(true)
+    }
   }
+
 
   const handleSaveBestModel = async () => {
     if (bestIdx === null) {
@@ -93,10 +152,18 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
     const finalModelName = `${modelName}-${formatted}`
 
     try {
-      await axios.post(`${API_BASE}/pulse/generator/save_automl_model`, {
-        model_temp_id: selected.temp_id,
-        final_model_name: finalModelName,
-      })
+      await axios.post(
+        `${API_BASE}/pulse/generator/save_automl_model`,
+        {
+          model_temp_id: selected.temp_id,
+          final_model_name: finalModelName,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
 
       // Guardamos resumen
       setSavedSummary({
@@ -170,11 +237,15 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
 
             {isTraining && (
               <div className="mt-3">
-                <h5>Training progress...</h5>
+                {status && <Alert variant="success">{status}</Alert>}
+                {error && <Alert variant="danger">{error}</Alert>}
+
+                <h5 className="mt-3">Model results</h5>
                 {trainingProgress.map((model, idx) => (
-                  <div key={idx}>
-                    Model {idx + 1}: Epochs {model.epochs}, Test size {model.test_size}% — R²:{' '}
-                    {(model.r2 * 100).toFixed(2)}%
+                  <div key={idx} className="mb-2">
+                    <strong>Model {model.model_idx} / {model.total_models}</strong><br />
+                    Epochs: {model.epochs}, Test size: {model.test_size}%<br />
+                    Loss: {model.loss.toFixed(6)} | MAE: {model.mae.toFixed(6)} | R²: {(model.r2 * 100).toFixed(2)}%
                   </div>
                 ))}
               </div>

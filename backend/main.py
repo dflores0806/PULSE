@@ -3,6 +3,8 @@ from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, Body, HTTP
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi import BackgroundTasks
+from fastapi import WebSocket, WebSocketDisconnect
 
 # 🔧 Pydantic
 from pydantic import BaseModel
@@ -15,7 +17,7 @@ import faiss
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sentence_transformers import SentenceTransformer
 from threading import Lock
 
@@ -37,6 +39,9 @@ import time
 import matplotlib.pyplot as plt
 import io
 import base64
+from uuid import uuid4
+import threading
+from typing import Dict
 from dotenv import load_dotenv
 
 ENV_PATH = Path(".env")
@@ -63,6 +68,25 @@ app.add_middleware(
 )
 #app = FastAPI(root_path="/pulse/api")
 
+task_status = {} 
+
+# Websocket to get the traning model status
+
+
+active_connections: Dict[str, WebSocket] = {}
+
+@app.websocket("/ws/train/{task_id}")
+async def websocket_endpoint(websocket: WebSocket, task_id: str):
+    await websocket.accept()
+    active_connections[task_id] = websocket
+    try:
+        while True:
+            await websocket.receive_text()  # Mantener la conexión abierta
+    except WebSocketDisconnect:
+        del active_connections[task_id]
+
+
+        
 def get_model(model_name):
     if model_name not in loaded_models:
         model_path = Path(MODEL_FOLDER, f'{model_name}.h5')
@@ -149,6 +173,114 @@ def suggest_features(model_name: str = Form(...)):
     return {"suggested_features": suggested, "correlations": corrs.to_dict()}
 
 @app.post("/pulse/generator/train_model", tags=["PUEModelGenerator"])
+async def train_model_async(
+    background_tasks: BackgroundTasks,
+    model_name: str = Form(...),
+    features: str = Form(...),
+    epochs: int = Form(...),
+    test_size: float = Form(...)
+):
+    task_id = str(uuid4())
+    task_status[task_id] = "running"
+
+    background_tasks.add_task(
+        train_model_task, task_id, model_name, features, epochs, test_size
+    )
+
+    return {"status": "started", "task_id": task_id}
+       
+@app.get("/pue/gen/status/{task_id}")
+def get_training_status(task_id: str):
+    return {"status": task_status.get(task_id, "unknown")}
+
+# --- FUNCION DE ENTRENAMIENTO EN SEGUNDO PLANO ---
+def train_model_task(task_id: str, model_name: str, features: str, epochs: int, test_size: float):
+    try:
+        features = json.loads(features)
+        file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
+        if not Path(file_location).exists():
+            raise FileNotFoundError(f"Dataset not found: {file_location}")
+
+        df = pd.read_csv(file_location, sep=';')
+        df.columns = [col.lower() for col in df.columns]
+        X = df[features].values
+        y = df['pue'].values
+
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_scaled, y, test_size=test_size / 100, random_state=42
+        )
+
+        model = tf.keras.Sequential([
+            tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dense(1)
+        ])
+
+        model.compile(optimizer='adam', loss='mse', metrics=['mae', 'mse'])
+
+        def on_epoch_end(epoch, logs):
+            progress = {
+                "epoch": epoch + 1,
+                "total_epochs": epochs,
+                "loss": float(logs["loss"]),
+                "mae": float(logs.get("mae", 0.0)),
+                "mse": float(logs.get("mse", 0.0))
+            }
+            if task_id in active_connections:
+                try:
+                    import asyncio
+                    asyncio.run(active_connections[task_id].send_json(progress))
+                except:
+                    pass
+
+        history = model.fit(
+            X_train, y_train,
+            epochs=epochs,
+            batch_size=16,
+            verbose=0,
+            callbacks=[tf.keras.callbacks.LambdaCallback(on_epoch_end=on_epoch_end)]
+        )
+
+        # Remove old version from cache if it exists
+        if model_name in loaded_models:
+            del loaded_models[model_name]
+
+        model.save(Path(MODEL_FOLDER, f'{model_name}.h5'), include_optimizer=False)
+        joblib.dump(scaler, Path(MODEL_FOLDER, f'{model_name}_scaler.gz'))
+        stored_data[model_name] = features
+
+        with model_lock:
+            model = get_model(model_name)
+            y_pred = model.predict(X_test).flatten()
+        mae = mean_absolute_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        loss = history.history['loss'][-1]
+
+        SUMMARY_FOLDER.mkdir(parents=True, exist_ok=True)
+        summary_path = Path(SUMMARY_FOLDER, f"{model_name}.json")
+        with open(summary_path, "w") as f:
+            json.dump({
+                "model_name": model_name,
+                "features": features,
+                "epochs": epochs,
+                "test_size": test_size,
+                "metrics": {
+                    "loss": float(loss),
+                    "mae": float(mae),
+                    "r2": float(r2)
+                }
+            }, f, indent=2)
+
+        task_status[task_id] = "completed"
+
+    except Exception as e:
+        task_status[task_id] = f"error: {str(e)}"
+
+
+@app.post("/pulse/generator/train_model", tags=["PUEModelGenerator"])
 def train_model(
     model_name: str = Form(...),
     features: str = Form(...),
@@ -157,6 +289,8 @@ def train_model(
 ):
     features = json.loads(features)
     file_location = os.path.abspath(Path(DATASETS_FOLDER, f"{model_name}.csv"))
+    if not Path(file_location).exists():
+        raise FileNotFoundError(f"Dataset not found: {file_location}")
     df = pd.read_csv(file_location, sep=';')
     df.columns = [col.lower() for col in df.columns]
     X = df[features].values
@@ -311,6 +445,142 @@ def get_example_input(
 
     row = df[features].dropna().sample(1).iloc[0]
     return {"example": row.to_dict()}
+
+@app.websocket("/ws/automl/{task_id}")
+async def websocket_automl(websocket: WebSocket, task_id: str):
+    await websocket.accept()
+    active_connections[task_id] = websocket
+    try:
+        while True:
+            await websocket.receive_text()  # mantener conexión viva
+    except WebSocketDisconnect:
+        del active_connections[task_id]
+        
+def automl_training_task(task_id: str, model_name: str, features: str, epochs_options: str, test_size_options: str):
+    try:
+        features = json.loads(features)
+        epochs_options = json.loads(epochs_options)
+        test_size_options = json.loads(test_size_options)
+
+        file_location = Path(DATASETS_FOLDER) / f"{model_name}.csv"
+        if not file_location.exists():
+            raise FileNotFoundError(f"Dataset not found: {file_location}")
+
+        df = pd.read_csv(file_location, sep=';')
+        df.columns = [col.lower() for col in df.columns]
+        X = df[features].values
+        y = df['pue'].values
+
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        total_models = len(epochs_options) * len(test_size_options)
+        model_counter = 0
+
+        for test_size in test_size_options:
+            X_train, X_test, y_train, y_test = train_test_split(
+                X_scaled, y, test_size=test_size / 100, random_state=42
+            )
+
+            for epochs in epochs_options:
+                model_counter += 1
+
+                model = tf.keras.Sequential([
+                    tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
+                    tf.keras.layers.Dense(32, activation='relu'),
+                    tf.keras.layers.Dense(1)
+                ])
+
+                model.compile(optimizer='adam', loss='mse', metrics=['mae', 'mse'])
+
+                def on_epoch_end(epoch, logs):
+                    progress = {
+                        "model_idx": model_counter,
+                        "total_models": total_models,
+                        "epoch": epoch + 1,
+                        "total_epochs": epochs,
+                        "loss": float(logs["loss"]),
+                        "mae": float(logs.get("mae", 0.0)),
+                        "mse": float(logs.get("mse", 0.0)),
+                        "test_size": test_size
+                    }
+                    if task_id in active_connections:
+                        import asyncio
+                        asyncio.run(active_connections[task_id].send_json(progress))
+
+
+                model.fit(
+                    X_train, y_train,
+                    epochs=epochs,
+                    batch_size=16,
+                    verbose=0,
+                    callbacks=[tf.keras.callbacks.LambdaCallback(on_epoch_end=on_epoch_end)]
+                )
+
+                y_pred = model.predict(X_test).flatten()
+                loss = mean_squared_error(y_test, y_pred)
+                mae = mean_absolute_error(y_test, y_pred)
+                r2 = r2_score(y_test, y_pred)
+
+                temp_id = str(uuid.uuid4())
+                temp_folder = Path("temp_models") / temp_id
+                temp_folder.mkdir(parents=True, exist_ok=True)
+                model.save(temp_folder / "model.h5", include_optimizer=False)
+                joblib.dump(scaler, temp_folder / "scaler.gz")
+
+                summary = {
+                    "model_name": model_name,
+                    "features": features,
+                    "epochs": epochs,
+                    "test_size": test_size,
+                    "metrics": {
+                        "loss": float(loss),
+                        "mae": float(mae),
+                        "r2": float(r2)
+                    }
+                }
+                with open(temp_folder / "summary.json", "w") as f:
+                    json.dump(summary, f, indent=2)
+
+                if task_id in active_connections:
+                    import asyncio
+                    asyncio.run(active_connections[task_id].send_json({
+                        "model_idx": model_counter,
+                        "total_models": total_models,
+                        "epochs": epochs,
+                        "test_size": test_size,
+                        "loss": round(float(loss), 6),
+                        "mae": round(float(mae), 6),
+                        "r2": round(float(r2), 6),
+                        "temp_id": temp_id,
+                        "is_summary": True  # clave para distinguir
+                    }))
+
+
+    except Exception as e:
+        if task_id in active_connections:
+            import asyncio
+            asyncio.run(active_connections[task_id].send_json({"error": str(e)}))
+
+@app.post("/pulse/generator/automl_train_ws", tags=["PUEModelGenerator"])
+async def launch_automl_ws(
+    background_tasks: BackgroundTasks,
+    model_name: str = Form(...),
+    features: str = Form(...),
+    epochs_options: str = Form(...),
+    test_size_options: str = Form(...)
+):
+    task_id = str(uuid.uuid4())
+    background_tasks.add_task(
+        automl_training_task,
+        task_id,
+        model_name,
+        features,
+        epochs_options,
+        test_size_options,
+    )
+    return {"status": "started", "task_id": task_id}
+
 
 @app.post("/pulse/generator/automl_train", tags=["PUEModelGenerator"])
 async def automl_train_streaming(
