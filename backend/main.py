@@ -671,10 +671,10 @@ active_model_name = None
 def load_dataset_once():
     global df, precomputed_correlation, descriptions, index, active_model_name
 
-    if not CONFIG_PATH.exists():
+    if not (CONFIG_PATH / CONFIG_FILE).exists():
         raise ValueError("No model selected. Please configure one in Settings.")
 
-    with open(CONFIG_PATH) as f:
+    with open(CONFIG_PATH / CONFIG_FILE) as f:
         config = json.load(f)
 
     model_name = config.get("default_model")
@@ -718,7 +718,7 @@ class AskRequest(BaseModel):
     model_name: str
 
 @app.post("/pulse/llm/ask", tags=["PUELLM"])
-async def ask_question(body: AskRequest, stream: bool = True):
+async def ask_question(body: AskRequest):
     try:
         load_dataset_once()
     except Exception as e:

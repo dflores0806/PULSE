@@ -82,7 +82,7 @@ const LLMAssistant = () => {
     controllerRef.current = new AbortController()
 
     try {
-      const res = await fetch(`${API_BASE}/pulse/llm/ask`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/pulse/llm/ask`, {
         method: 'POST',
         body: JSON.stringify({
           query: question,
