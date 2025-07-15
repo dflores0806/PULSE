@@ -230,7 +230,7 @@ const AutoMLGenerator = ({ setModelSaved, modelSaved, modelName, suggestedFeatur
                 <CSpinner size="sm" />
               ) : (
                 <>
-                  <CIcon icon={cilMediaPlay} className="me-2" /> Start AutoML
+                  <CIcon icon={cilMediaPlay} className="me-2" /> Start Auto trainer
                 </>
               )}
             </CButton>

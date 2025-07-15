@@ -58,7 +58,7 @@ const AppSidebar = () => {
     },
     {
       component: 'CNavItem',
-      name: 'Auto ML generator',
+      name: 'Auto trainer',
       to: '/puemodels/automl',
       icon: <CIcon icon={cilSpeedometer} customClassName="nav-icon" />,
     },

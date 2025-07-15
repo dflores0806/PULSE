@@ -56,11 +56,11 @@ const AutoMLWrapper = () => {
 
   return (
     <CCard className="mb-4">
-      <CCardHeader>AutoML generator</CCardHeader>
+      <CCardHeader>Auto trainer</CCardHeader>
 
       <CCardBody>
         <CAlert color="info">
-          The AutoML functionality automatically selects the most relevant features and optimal training parameters to build a predictive model for PUE estimation. Once a dataset is uploaded, the system analyzes correlations, tests various feature subsets and model configurations, and selects the best-performing combination based on predefined metrics. This process is launched through the AutoML training endpoint and results in a ready-to-use model, which can be saved and integrated into other components like the simulation engine or predictor module.
+          The Auto trainer functionality automatically selects the most relevant features and optimal training parameters to build a predictive model for PUE estimation. Once a dataset is uploaded, the system analyzes correlations, tests various feature subsets and model configurations, and selects the best-performing combination based on predefined metrics. This process is launched through the Auto trainer training endpoint and results in a ready-to-use model, which can be saved and integrated into other components like the simulation engine or predictor module.
         </CAlert>
         {!uploaded ? (
           <>
@@ -96,7 +96,7 @@ const AutoMLWrapper = () => {
           </>
         ) : (
           <>
-            {!modelSaved && <h5>Step 2: AutoML training</h5>}
+            {!modelSaved && <h5>Step 2: Auto trainer</h5>}
             <AutoMLGenerator setModelSaved={setModelSaved} modelSaved={modelSaved} modelName={modelName} suggestedFeatures={suggestedFeatures} />
           </>
         )}

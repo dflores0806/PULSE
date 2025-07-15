@@ -68,7 +68,7 @@ const routes = [
   { path: '/settings', name: 'Settings', element: Settings },
   { path: '/puemodels', name: 'PUE Models', element: PUEModelGenerator, exact: true },
   { path: '/puemodels/generator', name: 'Generator', element: PUEModelGenerator },
-  { path: '/puemodels/automl', name: 'Auto ML', element: PUEAutoModelWrapper },
+  { path: '/puemodels/automl', name: 'Auto trainer', element: PUEAutoModelWrapper },
   { path: '/puemodels/explorer', name: 'Explorer', element: PUEModelExplorer },
   { path: '/PUEApps', name: 'PUE Monitoring', element: PUEApps },
   { path: '/PUEApps/predictor', name: 'Predictor', element: PUEAppsPredictor },

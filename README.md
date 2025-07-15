@@ -245,7 +245,7 @@ npm run dev
     - Suggest and select features
     - Train model (epochs, test size)
     - Save with timestamped name
-- #### 🤖 Auto ML generator
+- #### 🤖 Auto trainer
     - Upload and analyze dataset structure
     - Automatically select optimal input features
     - Run automated model training pipeline
