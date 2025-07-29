@@ -194,6 +194,7 @@ def get_training_status(task_id: str):
     return {"status": task_status.get(task_id, "unknown")}
 
 # --- FUNCION DE ENTRENAMIENTO EN SEGUNDO PLANO ---
+
 def train_model_task(task_id: str, model_name: str, features: str, epochs: int, test_size: float):
     try:
         features = json.loads(features)
@@ -206,15 +207,19 @@ def train_model_task(task_id: str, model_name: str, features: str, epochs: int, 
         X = df[features].values
         y = df['pue'].values
 
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-
+        # First split
         X_train, X_test, y_train, y_test = train_test_split(
-            X_scaled, y, test_size=test_size / 100, random_state=42
+            X, y, test_size=test_size / 100, random_state=42
         )
 
+        # Then scalar using X_train
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+
         model = tf.keras.Sequential([
-            tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
+            tf.keras.layers.Input(shape=(X.shape[1],)),
+            tf.keras.layers.Dense(64, activation='relu'),
             tf.keras.layers.Dense(32, activation='relu'),
             tf.keras.layers.Dense(1)
         ])
@@ -244,7 +249,6 @@ def train_model_task(task_id: str, model_name: str, features: str, epochs: int, 
             callbacks=[tf.keras.callbacks.LambdaCallback(on_epoch_end=on_epoch_end)]
         )
 
-        # Remove old version from cache if it exists
         if model_name in loaded_models:
             del loaded_models[model_name]
 
@@ -280,6 +284,7 @@ def train_model_task(task_id: str, model_name: str, features: str, epochs: int, 
         task_status[task_id] = f"error: {str(e)}"
 
 
+
 @app.post("/pulse/generator/train_model", tags=["PUEModelGenerator"])
 def train_model(
     model_name: str = Form(...),
@@ -296,13 +301,17 @@ def train_model(
     X = df[features].values
     y = df['pue'].values
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # Split before scaler
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size / 100, random_state=42)
 
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=test_size / 100, random_state=42)
+    # Apply scaler over train data
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     model = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(X.shape[1],)),
+        tf.keras.layers.Input(shape=(X.shape[1],)),
+        tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dense(32, activation='relu'),
         tf.keras.layers.Dense(1)
     ])
@@ -310,7 +319,6 @@ def train_model(
     model.compile(optimizer='adam', loss='mse')
     history = model.fit(X_train, y_train, epochs=epochs, batch_size=16, verbose=0)
 
-    # Remove old version from cache if it exists
     if model_name in loaded_models:
         del loaded_models[model_name]
 
@@ -341,6 +349,7 @@ def train_model(
         }, f, indent=2)
 
     return {"message": "Model trained successfully.", "loss": float(loss), "mae": float(mae), "r2": float(r2)}
+
 
 @app.post("/pulse/generator/predict", tags=["PUEModelGenerator"])
 def predict_pue(
@@ -471,16 +480,17 @@ def automl_training_task(task_id: str, model_name: str, features: str, epochs_op
         X = df[features].values
         y = df['pue'].values
 
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-
         total_models = len(epochs_options) * len(test_size_options)
         model_counter = 0
 
         for test_size in test_size_options:
             X_train, X_test, y_train, y_test = train_test_split(
-                X_scaled, y, test_size=test_size / 100, random_state=42
+                X, y, test_size=test_size / 100, random_state=42
             )
+
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.transform(X_test)
 
             for epochs in epochs_options:
                 model_counter += 1
@@ -507,7 +517,6 @@ def automl_training_task(task_id: str, model_name: str, features: str, epochs_op
                     if task_id in active_connections:
                         import asyncio
                         asyncio.run(active_connections[task_id].send_json(progress))
-
 
                 model.fit(
                     X_train, y_train,
@@ -556,7 +565,6 @@ def automl_training_task(task_id: str, model_name: str, features: str, epochs_op
                         "is_summary": True  # clave para distinguir
                     }))
 
-
     except Exception as e:
         if task_id in active_connections:
             import asyncio
@@ -603,14 +611,16 @@ async def automl_train_streaming(
     X = df[features].values
     y = df['pue'].values
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
     async def model_generator():
         for test_size in test_size_options:
             X_train, X_test, y_train, y_test = train_test_split(
-                X_scaled, y, test_size=test_size/100, random_state=42
+                X, y, test_size=test_size/100, random_state=42
             )
+
+            # Fit scaler only on training data
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_test_scaled = scaler.transform(X_test)
 
             for epochs in epochs_options:
                 model = tf.keras.Sequential([
@@ -618,15 +628,11 @@ async def automl_train_streaming(
                     tf.keras.layers.Dense(32, activation='relu'),
                     tf.keras.layers.Dense(1)
                 ])
-                
-                #with model_lock:
-                    #model = get_model(model_name)
-                    
-                
-                model.compile(optimizer='adam', loss='mse')
-                history = model.fit(X_train, y_train, epochs=epochs, batch_size=16, verbose=0)
 
-                y_pred = model.predict(X_test).flatten()
+                model.compile(optimizer='adam', loss='mse')
+                history = model.fit(X_train_scaled, y_train, epochs=epochs, batch_size=16, verbose=0)
+
+                y_pred = model.predict(X_test_scaled).flatten()
                 loss = history.history['loss'][-1]
                 mae = mean_absolute_error(y_test, y_pred)
                 r2 = r2_score(y_test, y_pred)
@@ -662,7 +668,6 @@ async def automl_train_streaming(
                 }) + "\n"
 
     return StreamingResponse(model_generator(), media_type="application/json")
-
 
 class SaveAutoMLRequest(BaseModel):
     model_temp_id: str
